@@ -4,7 +4,7 @@ import { api } from '../api';
 import { useAuth, isAdmin } from '../auth';
 import { Badge, Button, Field, inputCls, Modal, Spinner, toast } from '../ui';
 
-/** Modal akaun saya — info pengguna + tukar kata laluan + log keluar */
+/** Modal akaun saya - info pengguna + tukar kata laluan + log keluar */
 export default function AccountModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { user, setUser } = useAuth();
   const [current, setCurrent] = useState('');
@@ -32,7 +32,7 @@ export default function AccountModal({ open, onClose }: { open: boolean; onClose
     setSaving(true);
     try {
       await api.post('/api/auth/change-password', { current_password: current, new_password: next });
-      toast('Kata laluan ditukar — peranti lain akan diminta log masuk semula', 'success');
+      toast('Kata laluan ditukar. Peranti lain akan diminta log masuk semula', 'success');
       onClose();
     } catch (e) {
       toast(e instanceof Error ? e.message : 'Ralat', 'error');

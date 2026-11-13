@@ -1,4 +1,4 @@
-// Kriptografi + sesi log masuk — ikut OWASP (Password Storage & Session Management)
+// Kriptografi + sesi log masuk - ikut OWASP (Password Storage & Session Management)
 // Kata laluan: HMAC-SHA256(pepper) → PBKDF2-SHA256(salt). Sesi: token raw dalam kuki,
 // hash SHA-256 sahaja dalam D1. Pepper tidak pernah disimpan dalam pangkalan data.
 
@@ -34,7 +34,7 @@ function b64uDecode(s: string): Uint8Array<ArrayBuffer> {
   return out;
 }
 
-/** Perbandingan masa-malar (portable) — jangan guna === untuk hash */
+/** Perbandingan masa-malar (portable) - jangan guna === untuk hash */
 function timingSafeEq(a: Uint8Array, b: Uint8Array): boolean {
   if (a.length !== b.length) return false;
   let diff = 0;
@@ -53,7 +53,7 @@ async function derive(password: string, salt: Uint8Array<ArrayBuffer>, pepper: s
   );
 }
 
-/** Format berjejak: pbkdf2_sha256$<iterasi>$<saltB64>$<hashB64> — mudah dinaik taraf */
+/** Format berjejak: pbkdf2_sha256$<iterasi>$<saltB64>$<hashB64> - mudah dinaik taraf */
 export async function hashPassword(password: string, pepper: string): Promise<string> {
   const salt = crypto.getRandomValues(new Uint8Array(16));
   const hash = await derive(password, salt, pepper, PBKDF2_ITERATIONS);
@@ -75,7 +75,7 @@ export async function verifyPassword(stored: string, password: string, pepper: s
   }
 }
 
-/** Untuk username tidak dikenali — jalankan derivasi sama supaya masa tindak balas seragam */
+/** Untuk username tidak dikenali - jalankan derivasi sama supaya masa tindak balas seragam */
 const DUMMY_SALT = new Uint8Array(16);
 export async function dummyDerive(password: string, pepper: string): Promise<void> {
   await derive(password, DUMMY_SALT, pepper, PBKDF2_ITERATIONS);
@@ -166,7 +166,7 @@ export function readCookie(header: string | undefined, name: string): string | n
 
 export function sameOrigin(req: Request): boolean {
   const origin = req.headers.get('Origin');
-  if (!origin) return true; // pelanggan tanpa Origin (cth. curl) — kuki SameSite tetap melindungi
+  if (!origin) return true; // pelanggan tanpa Origin (cth. curl) - kuki SameSite tetap melindungi
   try {
     return origin === new URL(req.url).origin;
   } catch {

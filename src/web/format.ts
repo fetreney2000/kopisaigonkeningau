@@ -1,4 +1,4 @@
-// Pemformatan ikut ms-MY — Ringgit Malaysia (RM), waktu Kuala Lumpur (UTC+8)
+// Pemformatan ikut ms-MY - Ringgit Malaysia (RM), waktu Kuala Lumpur (UTC+8)
 
 const KL_OFFSET_MS = 8 * 3600_000;
 
@@ -103,7 +103,7 @@ export function bulanPendek(ym: string): string {
 }
 
 export function hariBerbaki(days: number | null): string {
-  if (days === null) return '–';
+  if (days === null) return '-';
   if (days <= 0) return 'Habis';
   if (days < 1) return '< 1 hari';
   if (days > 365) return '> 1 tahun';

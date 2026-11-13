@@ -25,7 +25,7 @@ function genId(prefix: string, len = 8): string {
   return `${prefix}-${out}`;
 }
 
-// Zon masa Malaysia (MYT, UTC+8, tiada DST) — semua tarikh direkod ikut waktu Kuala Lumpur
+// Zon masa Malaysia (MYT, UTC+8, tiada DST) - semua tarikh direkod ikut waktu Kuala Lumpur
 const KL_OFFSET_MS = 8 * 3600_000;
 
 function klNow(): Date {
@@ -106,7 +106,7 @@ function addTotals(t: SourceTotals, source: string, v: number) {
   else t.local += v;
 }
 
-/** Versi item tanpa kos — untuk peranan staff (tiada perbelanjaan dipaparkan) */
+/** Versi item tanpa kos - untuk peranan staff (tiada perbelanjaan dipaparkan) */
 function staffItem(item: Item, stock: number): StaffItem {
   return {
     id: item.id,
@@ -144,7 +144,7 @@ const requireAuth: MiddlewareHandler = async (c, next) => {
 };
 
 const adminOnly: MiddlewareHandler = async (c, next) => {
-  if (c.get('user')?.role !== 'admin') return jsonError('Tiada kebenaran — admin sahaja', 403);
+  if (c.get('user')?.role !== 'admin') return jsonError('Tiada kebenaran (admin sahaja)', 403);
   await next();
 };
 
@@ -166,7 +166,7 @@ api.use('*', async (c, next) => {
 
 // -- Autentikasi (awam) ---------------------------------------------------------
 function pepperOf(env: Env): string {
-  if (!env.PASSWORD_PEPPER) throw new Error('PASSWORD_PEPPER tidak ditetapkan — jalankan `wrangler secret put PASSWORD_PEPPER`');
+  if (!env.PASSWORD_PEPPER) throw new Error('PASSWORD_PEPPER tidak ditetapkan. Jalankan `wrangler secret put PASSWORD_PEPPER`');
   return env.PASSWORD_PEPPER;
 }
 
@@ -202,7 +202,7 @@ async function createUser(c: Context<{ Bindings: Env; Variables: Vars }>, role: 
   const position = str(b.position);
   const password = str(b.password);
   if (!full_name) return jsonError('Nama penuh diperlukan');
-  if (!USERNAME_RE.test(username)) return jsonError('Nama pengguna mesti 3–32 aksara (huruf kecil, nombor, . _ -)');
+  if (!USERNAME_RE.test(username)) return jsonError('Nama pengguna mesti 3-32 aksara (huruf kecil, nombor, . _ -)');
   if (password.length < 8) return jsonError('Kata laluan mesti sekurang-kurangnya 8 aksara');
   if (password.length > 64) return jsonError('Kata laluan terlalu panjang (maks 64)');
 
@@ -232,7 +232,7 @@ api.get('/auth/me', async (c) => {
 api.post('/auth/setup', async (c) => {
   if (!sameOrigin(c.req.raw)) return jsonError('Asal permintaan tidak sah', 403);
   const n = await c.env.DB.prepare('SELECT COUNT(*) AS n FROM users').first<{ n: number }>();
-  if ((n?.n ?? 0) > 0) return jsonError('Akaun sudah wujud — sila log masuk', 403);
+  if ((n?.n ?? 0) > 0) return jsonError('Akaun sudah wujud. Sila log masuk', 403);
   return createUser(c, 'admin');
 });
 
@@ -346,7 +346,7 @@ api.patch('/users/:id', adminOnly, async (c) => {
   const position = str(b.position);
   const role = str(b.role) === 'admin' ? 'admin' : 'staff';
   if (!full_name) return jsonError('Nama penuh diperlukan');
-  if (!USERNAME_RE.test(username)) return jsonError('Nama pengguna mesti 3–32 aksara (huruf kecil, nombor, . _ -)');
+  if (!USERNAME_RE.test(username)) return jsonError('Nama pengguna mesti 3-32 aksara (huruf kecil, nombor, . _ -)');
   if (id === me.id && role !== target.role) return jsonError('Tidak boleh menukar peranan akaun sendiri', 403);
 
   const dup = await c.env.DB.prepare('SELECT id FROM users WHERE username = ?1 AND id != ?2').bind(username, id).first();
@@ -388,7 +388,7 @@ api.post('/users/:id/rotate-qr', adminOnly, async (c) => {
   const qrCode = genId('USR');
   const r = await c.env.DB.prepare('UPDATE users SET qr_token_hash = ?2 WHERE id = ?1').bind(id, await sha256Hex(qrCode)).run();
   if (!r.success) return jsonError('Gagal menukar kod QR', 500);
-  return c.json({ qr_code: qrCode }); // kod lama lupus — cetak yang baharu
+  return c.json({ qr_code: qrCode }); // kod lama lupus - cetak yang baharu
 });
 
 api.delete('/users/:id', adminOnly, async (c) => {
@@ -428,7 +428,7 @@ api.get('/staff/home', requireAuth, async (c) => {
   return c.json<StaffHome>({ total_items: all.length, need_reorder, my_usage_today: myRows.results ?? [] });
 });
 
-// -- Ringkasan papan pemuka (admin sahaja — mengandungi nilai perbelanjaan) ---
+// -- Ringkasan papan pemuka (admin sahaja - mengandungi nilai perbelanjaan) ---
 api.get('/summary', adminOnly, async (c) => {
   const db = c.env.DB;
   const now = klNow();
@@ -533,7 +533,7 @@ api.get('/items', async (c) => {
 });
 
 api.get('/items/lookup/:code', async (c) => {
-  // Khusus untuk imbasan QR — padanan tepat kod item (bukan carian nama)
+  // Khusus untuk imbasan QR - padanan tepat kod item (bukan carian nama)
   const user = c.get('user')!;
   const code = str(c.req.param('code')).toUpperCase();
   if (!/^SG-[A-Z2-9]{8}$/.test(code)) return jsonError('Kod tidak sah', 404);
@@ -594,7 +594,7 @@ api.delete('/items/:id', adminOnly, async (c) => {
   return c.json({ ok: true });
 });
 
-// -- Butiran item (admin sahaja — mengandungi kos & sejarah) -------------------
+// -- Butiran item (admin sahaja - mengandungi kos & sejarah) -------------------
 api.get('/items/:id', adminOnly, async (c) => {
   const id = c.req.param('id');
   const itemRow = await c.env.DB.prepare('SELECT * FROM items WHERE id = ?1 AND archived = 0').bind(id).first<Item>();

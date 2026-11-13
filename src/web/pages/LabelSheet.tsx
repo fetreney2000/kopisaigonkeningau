@@ -17,7 +17,7 @@ interface Preset {
   cellW: number;   // mm
   cellH: number;   // mm
   gap: number;     // mm
-  /** padding helaian (mm) — [atas, kanan, bawah, kiri] */
+  /** padding helaian (mm) - [atas, kanan, bawah, kiri] */
   pad: [number, number, number, number];
   qrMm: number;
   layout: 'vertical' | 'horizontal';
@@ -27,20 +27,20 @@ interface Preset {
 // A4 = 210 × 297 mm. Kawasan cetakan selamat dipastikan >= 10mm dari tepi kertas.
 const PRESETS: Preset[] = [
   {
-    key: 'big', label: 'Besar', note: '8 label / lembar — bekas besar',
+    key: 'big', label: 'Besar', note: '8 label / lembar, bekas besar',
     cols: 2, rows: 4, cellW: 92.5, cellH: 64, gap: 5, pad: [10, 10, 10, 10], qrMm: 32, layout: 'vertical',
   },
   {
-    key: 'normal', label: 'Biasa', note: '15 label / lembar — kebanyakan item',
+    key: 'normal', label: 'Biasa', note: '15 label / lembar, kebanyakan item',
     cols: 3, rows: 5, cellW: 60.6, cellH: 52, gap: 4, pad: [10, 10, 10, 10], qrMm: 26, layout: 'vertical',
   },
   {
-    key: 'avery', label: 'Avery L4737', note: '27 label / lembar — pelekat siap potong',
+    key: 'avery', label: 'Avery L4737', note: '27 label / lembar, pelekat siap potong',
     cols: 3, rows: 9, cellW: 63.5, cellH: 29.6, gap: 0, pad: [15.3, 9.75, 15.3, 9.75], qrMm: 21, layout: 'horizontal',
     avery: 'Avery L4737 / L6004 (63.5 × 29.6 mm)',
   },
   {
-    key: 'small', label: 'Kecil', note: '45 label / lembar — bekas kecil (imbas dekat)',
+    key: 'small', label: 'Kecil', note: '45 label / lembar, bekas kecil (imbas dekat)',
     cols: 5, rows: 9, cellW: 35.6, cellH: 27.9, gap: 3, pad: [10, 10, 10, 10], qrMm: 17, layout: 'horizontal',
   },
 ];
@@ -174,7 +174,7 @@ export default function LabelSheet() {
                 ))}
               </div>
               {preset.avery && (
-                <p className="mt-2 text-xs text-leaf-700">✓ Se padan dengan pelekat {preset.avery} — tampal terus, tiada potongan diperlukan.</p>
+                <p className="mt-2 text-xs text-leaf-700">✓ Se padan dengan pelekat {preset.avery}, tampal terus, tiada potongan diperlukan.</p>
               )}
             </div>
             <div className="flex items-end">
@@ -264,7 +264,7 @@ export default function LabelSheet() {
         <Card className="p-4 text-xs leading-relaxed text-bark-700/80">
           <b className="text-bark-900">Sebelum mencetak:</b> dalam dialog cetak pilih kertas <b>A4</b>, skala <b>100%</b>,
           margin <b>Lalai</b>, dan matikan <b>Header &amp; Footer</b>. Kod QR pada helaian ini berukuran{' '}
-          <b>{preset.qrMm} mm</b> dengan ruang lega (quiet zone) — imbas dari 15–30 cm.{' '}
+          <b>{preset.qrMm} mm</b> dengan ruang lega (quiet zone), imbas dari 15-30 cm.{' '}
           <b className="text-amber-warn">Uji cetak 1 lembar dan imbas dahulu</b> sebelum mencetak banyak.
         </Card>
       </div>

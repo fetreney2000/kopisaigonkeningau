@@ -129,9 +129,9 @@ function MovementModal({ kind, item, onClose, onSaved }: {
   const [saving, setSaving] = useState(false);
 
   const titles = {
-    purchase: `Stok Masuk — ${item.name}`,
-    usage: `Stok Keluar — ${item.name}`,
-    adjust: `Laraskan Stok — ${item.name}`,
+    purchase: `Stok Masuk: ${item.name}`,
+    usage: `Stok Keluar: ${item.name}`,
+    adjust: `Laraskan Stok: ${item.name}`,
   } as const;
 
   async function save() {
@@ -214,7 +214,7 @@ function MovementModal({ kind, item, onClose, onSaved }: {
         )}
 
         {kind === 'usage' && item.stock > 0 && (parseFloat(qty) || 0) > item.stock && (
-          <p className="text-sm font-medium text-amber-warn">⚠ Kuantiti melebihi stok semasa — pastikan ini betul.</p>
+          <p className="text-sm font-medium text-amber-warn">⚠ Kuantiti melebihi stok semasa. Pastikan ini betul.</p>
         )}
 
         {err && <p className="text-sm font-medium text-berry-600">{err}</p>}
@@ -374,7 +374,7 @@ function ItemDetailModal({ itemId, onClose, onChanged }: { itemId: string; onClo
               </Card>
               <Card className="p-3.5">
                 <div className="text-xs font-semibold text-bark-700/60">UNJURAN / BULAN</div>
-                <div className="num mt-1 text-lg font-extrabold text-bark-900">{stats.proj > 0 ? rm(stats.proj) : '–'}</div>
+                <div className="num mt-1 text-lg font-extrabold text-bark-900">{stats.proj > 0 ? rm(stats.proj) : '-'}</div>
                 <div className="text-[11px] text-bark-700/60">30 hari akan datang</div>
               </Card>
               <Card className="p-3.5">

@@ -62,7 +62,7 @@ export default function UserQr() {
 
       <p className="mx-auto max-w-md text-center text-xs leading-relaxed text-bark-700/60 no-print">
         Petua: cetak dan tampal pada kad pekerja atau simpan di kaunter. Sesuai yang tidak berdaftar log masuk dengan kata laluan.
-        Jika kad hilang, admin boleh <b>Tukar Kod QR</b> — kod lama terus tidak sah.
+        Jika kad hilang, admin boleh <b>Tukar Kod QR</b> dan kod lama terus tidak sah.
       </p>
     </div>
   );

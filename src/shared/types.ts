@@ -129,7 +129,7 @@ export interface AdjustmentRow {
   delta: number;
   item_name: string;
   unit: string;
-  /** Nilai pelarasan (delta × kos seunit) — boleh negatif */
+  /** Nilai pelarasan (delta × kos seunit) - boleh negatif */
   value: number;
 }
 
@@ -177,7 +177,7 @@ export interface AuthMe {
   needs_setup: boolean;
 }
 
-/** Item ringkas tanpa maklumat kos — untuk peranan staff */
+/** Item ringkas tanpa maklumat kos - untuk peranan staff */
 export interface StaffItem {
   id: string;
   name: string;
@@ -199,7 +199,7 @@ export interface StaffUsageRow {
   created_at: string;
 }
 
-/** Data dashboard staff — tiada kos/perbelanjaan langsung */
+/** Data dashboard staff - tiada kos/perbelanjaan langsung */
 export interface StaffHome {
   total_items: number;
   need_reorder: StaffItem[];

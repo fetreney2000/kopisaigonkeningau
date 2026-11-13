@@ -139,7 +139,7 @@ export default function Purchases() {
         ) : list.error ? (
           <ErrorState message={list.error} reload={list.reload} />
         ) : grouped.length === 0 ? (
-          <EmptyState icon={<PackagePlus size={24} />} title="Tiada pembelian lagi" message="Rekod pembelian pertama anda — stok akan bertambah secara automatik." />
+          <EmptyState icon={<PackagePlus size={24} />} title="Tiada pembelian lagi" message="Rekod pembelian pertama anda. Stok akan bertambah secara automatik." />
         ) : (
           <div className="space-y-4">
             {grouped.map(([ym, rows]) => (
@@ -149,7 +149,7 @@ export default function Purchases() {
                   {rows.map((p) => (
                     <div key={p.id} className="flex items-center gap-3 px-4 py-3">
                       <div className="min-w-0 flex-1">
-                        <div className="truncate text-[15px] font-semibold text-bark-900">{p.item_name ?? '—'}</div>
+                        <div className="truncate text-[15px] font-semibold text-bark-900">{p.item_name ?? '-'}</div>
                         <div className="num text-xs text-bark-700/60">
                           {tarikh(p.date)} · {angka(p.qty)} × {rm(p.unit_cost)}
                           {p.note ? ` · ${p.note}` : ''}

@@ -9,7 +9,7 @@ interface AuthCtx {
   setUser: (u: SessionUser) => void;
 }
 
-// Nilai lalai hanya supaya TypeScript senang — App sentiasa membekalkan nilai sebenar
+// Nilai lalai hanya supaya TypeScript senang - App sentiasa membekalkan nilai sebenar
 const Ctx = createContext<AuthCtx>({ user: null, setUser: () => {} });
 
 export function AuthProvider({ user, setUser, children }: AuthCtx & { children: ReactNode }) {

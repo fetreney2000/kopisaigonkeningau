@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 @theme {
-  /* Tema kopi — krem hangat + espresso */
+  /* Tema kopi - krem hangat + espresso */
   --color-cream-50: #fbf8f3;
   --color-cream-100: #f6f0e7;
   --color-cream-200: #ece2d2;
@@ -46,7 +46,7 @@ body {
   font-variant-numeric: tabular-nums lining-nums;
 }
 
-/* Gaya penjuru 4px — seragam di mana-mana */
+/* Gaya penjuru 4px - seragam di mana-mana */
 *,
 *::before,
 *::after {

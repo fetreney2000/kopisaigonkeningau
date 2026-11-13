@@ -28,14 +28,14 @@ export function SpendChart({ months, mode }: { months: MonthRow[]; mode: 'spend'
               <div className="flex w-full flex-col justify-end" style={{ height: H - 24 }}>
                 {m[keyL] > 0 && (
                   <div
-                    title={`${bulanPendek(m.ym)} — Tempatan: ${rmPlain(m[keyL])}`}
+                    title={`${bulanPendek(m.ym)} · Tempatan: ${rmPlain(m[keyL])}`}
                     className="w-full rounded-t-md bg-caramel-400 transition-all"
                     style={{ height: Math.max(hL, m[keyL] > 0 ? 3 : 0) }}
                   />
                 )}
                 {m[key] > 0 && (
                   <div
-                    title={`${bulanPendek(m.ym)} — Francais: ${rmPlain(m[key])}`}
+                    title={`${bulanPendek(m.ym)} · Francais: ${rmPlain(m[key])}`}
                     className={`w-full bg-bark-800 transition-all ${m[keyL] > 0 ? '' : 'rounded-t-md'}`}
                     style={{ height: Math.max(hF, m[key] > 0 ? 3 : 0) }}
                   />

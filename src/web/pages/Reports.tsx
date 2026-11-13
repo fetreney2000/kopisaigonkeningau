@@ -53,7 +53,7 @@ export default function ReportsPage() {
     blok('FRANCAIS', franchisor);
     blok('KEDAI TEMPATAN', local);
     navigator.clipboard.writeText(lines.join('\n'))
-      .then(() => toast('Senarai pesanan disalin — tampal dalam WhatsApp/nota', 'success'))
+      .then(() => toast('Senarai pesanan disalin. Tampal dalam WhatsApp/nota', 'success'))
       .catch(() => toast('Gagal menyalin', 'error'));
   }
 
@@ -161,7 +161,7 @@ export default function ReportsPage() {
           <div>
             <h3 className="font-bold text-bark-900">
               Belanja vs Penggunaan
-              {bv !== 'total' && <span className="text-bark-700/60"> — {SOURCE_LABEL[bv]}</span>}
+              {bv !== 'total' && <span className="text-bark-700/60"> · {SOURCE_LABEL[bv]}</span>}
             </h3>
             <p className="text-xs text-bark-700/60">Beza positif = dibeli lebih daripada digunakan (stok bertambah); negatif = stok digunakan melebihi pembelian</p>
           </div>
@@ -276,12 +276,12 @@ export default function ReportsPage() {
                     <div className="text-[11px] text-bark-700/60">{SOURCE_LABEL[it.source]}</div>
                   </td>
                   <td className="num px-3 py-2.5 text-right">{angka(it.stock)} <span className="text-[11px] text-bark-700/60">{it.unit}</span></td>
-                  <td className="num px-3 py-2.5 text-right text-bark-700">{it.daily_rate > 0 ? angka(Math.round(it.daily_rate * 1000) / 1000) : '–'}</td>
+                  <td className="num px-3 py-2.5 text-right text-bark-700">{it.daily_rate > 0 ? angka(Math.round(it.daily_rate * 1000) / 1000) : '-'}</td>
                   <td className={`num px-3 py-2.5 text-right ${it.days_left !== null && it.days_left <= 7 ? 'font-bold text-berry-600' : 'text-bark-700'}`}>
                     {hariBerbaki(it.days_left)}
                   </td>
                   <td className="num px-4 py-2.5 text-right font-bold text-bark-900">
-                    {it.projected_monthly_cost > 0 ? rm(it.projected_monthly_cost) : '–'}
+                    {it.projected_monthly_cost > 0 ? rm(it.projected_monthly_cost) : '-'}
                   </td>
                 </tr>
               ))}

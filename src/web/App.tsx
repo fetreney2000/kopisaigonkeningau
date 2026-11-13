@@ -277,7 +277,7 @@ export default function App() {
         <Sidebar route={base} onAccount={() => setAccountOpen(true)} />
         <BottomNav route={base} />
 
-        {/* Bar atas mudah alih — jenama + akses Pengguna (admin) + Akaun */}
+        {/* Bar atas mudah alih - jenama + akses Pengguna (admin) + Akaun */}
         <MobileHeader onAccount={() => setAccountOpen(true)} />
 
         <main className="mx-auto w-full max-w-5xl px-4 pb-28 pt-4 md:px-10 md:pb-12 md:pt-8">{page}</main>

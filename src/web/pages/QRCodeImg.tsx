@@ -74,7 +74,7 @@ export async function getQrDataUrl(value: string, size: number, margin = 2): Pro
       url = canvas.toDataURL('image/png');
     }
   } catch {
-    // Logo gagal dimuat — QR asas tanpa logo masih sah
+    // Logo gagal dimuat - QR asas tanpa logo masih sah
   }
 
   composeCache.set(key, url);
@@ -83,7 +83,7 @@ export async function getQrDataUrl(value: string, size: number, margin = 2): Pro
 
 // ------------------------------------------------------------------ komponen
 
-/** Komponen kod QR — nilai = kod item/pengguna, output PNG data-URL dengan logo tengah */
+/** Komponen kod QR - nilai = kod item/pengguna, output PNG data-URL dengan logo tengah */
 export default function QRCodeImg({ value, size = 96, margin = 2, className = '' }: { value: string; size?: number; margin?: number; className?: string }) {
   const [url, setUrl] = useState<string>('');
   useEffect(() => {

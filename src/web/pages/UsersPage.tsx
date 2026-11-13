@@ -43,7 +43,7 @@ function AddUserModal({ open, onClose, onCreated }: { open: boolean; onClose: ()
         <Field label="Nama Penuh">
           <input className={inputCls} value={fullName} onChange={(e) => setFullName(e.target.value)} />
         </Field>
-        <Field label="Nama Pengguna" hint="3–32 aksara: huruf kecil, nombor, titik, garis bawah atau sempang">
+        <Field label="Nama Pengguna" hint="3-32 aksara: huruf kecil, nombor, titik, garis bawah atau sempang">
           <input className={inputCls} value={username} onChange={(e) => setUsername(e.target.value)} autoCapitalize="none" />
         </Field>
         <Field label="Jawatan">
@@ -65,7 +65,7 @@ function AddUserModal({ open, onClose, onCreated }: { open: boolean; onClose: ()
             ))}
           </div>
         </Field>
-        <Field label="Kata Laluan Awal" hint="Sekurang-kurangnya 8 aksara — boleh ditetapkan semula kemudian">
+        <Field label="Kata Laluan Awal" hint="Sekurang-kurangnya 8 aksara, boleh ditetapkan semula kemudian">
           <input className={inputCls} type="text" value={password} onChange={(e) => setPassword(e.target.value)} />
         </Field>
         <div className="flex gap-3">
@@ -168,7 +168,7 @@ export default function UsersPage() {
     try {
       const res = await api.post<{ password: string }>(`/api/users/${u.id}/reset-password`, {});
       setNewPassword(res.password);
-      toast('Kata laluan ditetapkan semula — sesi lama dilumpuhkan', 'success');
+      toast('Kata laluan ditetapkan semula. Sesi lama dilumpuhkan', 'success');
     } catch (e) {
       toast(e instanceof Error ? e.message : 'Ralat', 'error');
       setPwModal(null);
@@ -274,7 +274,7 @@ export default function UsersPage() {
               <div className="num mt-1 font-mono text-[10px] tracking-wider text-bark-700/40">{qrModal.code}</div>
             </div>
             <p className="text-sm text-bark-700/70">
-              Kod ini adalah <b>kunci log masuk</b> — cetak dan simpan dengan selamat. Sesiapa yang memegangnya boleh log masuk
+              Kod ini adalah <b>kunci log masuk</b>. Cetak dan simpan dengan selamat. Sesiapa yang memegangnya boleh log masuk
               sebagai pengguna ini. Jika hilang, gunakan <b>Tukar Kod QR</b> untuk menjana yang baharu (kod lama terus tidak sah).
             </p>
             <div className="flex gap-3">

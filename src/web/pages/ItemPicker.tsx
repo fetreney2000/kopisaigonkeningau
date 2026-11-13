@@ -5,7 +5,7 @@ import { angka, SOURCE_LABEL } from '../format';
 import { Badge, inputCls, Modal } from '../ui';
 import type { ItemWithStock } from '../../shared/types';
 
-/** Pemilih item berasaskan modal — selesa digunakan pada telefon (sasaran sentuh besar) */
+/** Pemilih item berasaskan modal - selesa digunakan pada telefon (sasaran sentuh besar) */
 export function ItemPicker({
   open, onClose, onPick,
 }: {
@@ -70,7 +70,7 @@ export function ItemPickerField({ label, item, onPick }: {
         className={`${inputCls} flex items-center justify-between text-left`}
       >
         <span className={item ? '' : 'text-bark-700/40'}>
-          {item ? item.name : '— Pilih item —'}
+          {item ? item.name : 'Pilih item'}
         </span>
         {item && <Badge className={item.source === 'franchisor' ? 'bg-bark-800 text-cream-100' : 'bg-caramel-400/30 text-coffee-500'}>{SOURCE_LABEL[item.source]}</Badge>}
       </button>

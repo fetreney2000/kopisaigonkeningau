@@ -46,7 +46,7 @@ function SetupForm({ onDone }: { onDone: (u: User) => void }) {
       <Field label="Nama Penuh">
         <input className={inputCls} value={fullName} onChange={(e) => setFullName(e.target.value)} autoFocus />
       </Field>
-      <Field label="Nama Pengguna" hint="3–32 aksara: huruf kecil, nombor, titik, garis bawah atau sempang">
+      <Field label="Nama Pengguna" hint="3-32 aksara: huruf kecil, nombor, titik, garis bawah atau sempang">
         <input className={inputCls} value={username} onChange={(e) => setUsername(e.target.value)} autoCapitalize="none" />
       </Field>
       <Field label="Jawatan">
@@ -180,7 +180,7 @@ export default function LoginPage({ me, onLogin }: { me: AuthMe; onLogin: (u: Us
           <div className="rounded-2xl bg-white p-6 shadow-lg">
             <h2 className="mb-1 text-lg font-bold text-bark-900">Persediaan Pertama</h2>
             <p className="mb-5 text-sm text-bark-700/60">
-              Tiada akaun lagi. Cipta akaun <b>admin</b> pertama — anda akan menguruskan akaun staff selepas itu.
+              Tiada akaun lagi. Cipta akaun <b>admin</b> pertama. Anda akan menguruskan akaun staff selepas itu.
             </p>
             <SetupForm onDone={onLogin} />
           </div>

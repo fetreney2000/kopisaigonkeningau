@@ -5,7 +5,7 @@ import { navigate } from '../App';
 import { useApi } from '../api';
 import type { ItemDetail } from '../../shared/types';
 
-/** Halaman label kod QR untuk dicetak — dibuka dalam tab baharu (#/label/:id) */
+/** Halaman label kod QR untuk dicetak - dibuka dalam tab baharu (#/label/:id) */
 export default function Labels({ itemId }: { itemId: string }) {
   const { data, loading, error, reload } = useApi<ItemDetail>(`/api/items/${itemId}`);
   const item = data?.item;
