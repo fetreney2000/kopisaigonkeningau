@@ -500,43 +500,68 @@ function ItemDetailModal({ itemId, onClose, onChanged }: { itemId: string; onClo
             </div>
             {tab === 'kad' ? (
               <Card className="overflow-hidden">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b-2 border-coffee-500 bg-coffee-500/5 px-4 py-3">
+                  <div>
+                    <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-coffee-500">Kad Stok</div>
+                    <div className="text-sm font-bold text-bark-900">{item.name}</div>
+                  </div>
+                  <div className="num text-right text-[11px] leading-4 text-bark-700/60">
+                    <div>Kod: <span className="font-mono text-[10px]">{item.id}</span></div>
+                    <div>Unit: {item.unit} · Min: {angka(item.min_qty)}</div>
+                  </div>
+                </div>
                 {kad.length === 0 ? (
                   <p className="py-4 text-center text-sm text-bark-700/50">Tiada rekod lagi.</p>
                 ) : (
                   <div className="overflow-x-auto">
-                    <table className="w-full min-w-[520px] text-sm">
+                    <table className="w-full min-w-[560px] border-collapse text-sm">
                       <thead>
-                        <tr className="border-b border-cream-200 text-left text-[11px] uppercase tracking-wide text-bark-700/60">
-                          <th className="px-3 py-2.5 font-semibold">Tarikh</th>
-                          <th className="px-3 py-2.5 font-semibold">Butiran</th>
-                          <th className="num px-3 py-2.5 text-right font-semibold">Masuk</th>
-                          <th className="num px-3 py-2.5 text-right font-semibold">Keluar</th>
-                          <th className="num px-3 py-2.5 text-right font-semibold">Baki</th>
+                        <tr className="bg-cream-200 text-[11px] uppercase tracking-wide text-bark-800">
+                          <th className="border border-cream-300 px-3 py-2 text-left font-bold">Tarikh</th>
+                          <th className="border border-cream-300 px-3 py-2 text-left font-bold">Butiran</th>
+                          <th className="num border border-cream-300 px-3 py-2 text-right font-bold">Masuk</th>
+                          <th className="num border border-cream-300 px-3 py-2 text-right font-bold">Keluar</th>
+                          <th className="num border border-cream-300 px-3 py-2 text-right font-bold">Baki ({item.unit})</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-cream-100">
+                      <tbody>
+                        {(() => {
+                          const k0 = kad[0];
+                          const bakiAwal = k0.baki - k0.masuk + k0.keluar;
+                          return (
+                            <tr className="bg-cream-100/70">
+                              <td className="border border-cream-300 px-3 py-2 text-bark-700/60" colSpan={4}>Baki dibawa ke hadapan</td>
+                              <td className="num border border-cream-300 px-3 py-2 text-right font-bold text-bark-900">{angka(bakiAwal)}</td>
+                            </tr>
+                          );
+                        })()}
                         {kad.map((k, i) => (
-                          <tr key={i}>
-                            <td className="num whitespace-nowrap px-3 py-2.5 text-bark-700">{tarikh(k.date)}</td>
-                            <td className="px-3 py-2.5 text-bark-900">{k.desc}</td>
-                            <td className="num whitespace-nowrap px-3 py-2.5 text-right text-leaf-700">{k.masuk > 0 ? `+${angka(k.masuk)}` : ''}</td>
-                            <td className="num whitespace-nowrap px-3 py-2.5 text-right text-berry-600">{k.keluar > 0 ? `-${angka(k.keluar)}` : ''}</td>
-                            <td className="num whitespace-nowrap px-3 py-2.5 text-right font-bold text-bark-900">{angka(k.baki)}</td>
+                          <tr key={i} className={i % 2 === 1 ? 'bg-cream-100/40' : ''}>
+                            <td className="num whitespace-nowrap border border-cream-300 px-3 py-2 text-bark-700">{tarikh(k.date)}</td>
+                            <td className="border border-cream-300 px-3 py-2 text-bark-900">{k.desc}</td>
+                            <td className="num whitespace-nowrap border border-cream-300 px-3 py-2 text-right font-semibold text-leaf-700">{k.masuk > 0 ? `+${angka(k.masuk)}` : ''}</td>
+                            <td className="num whitespace-nowrap border border-cream-300 px-3 py-2 text-right font-semibold text-berry-600">{k.keluar > 0 ? `-${angka(k.keluar)}` : ''}</td>
+                            <td className="num whitespace-nowrap border border-cream-300 px-3 py-2 text-right font-bold text-bark-900">{angka(k.baki)}</td>
                           </tr>
                         ))}
                       </tbody>
                       <tfoot>
-                        <tr className="border-t border-cream-200 bg-cream-100/60 font-bold">
-                          <td className="px-3 py-2.5" colSpan={2}>Jumlah</td>
-                          <td className="num px-3 py-2.5 text-right text-leaf-700">+{angka(kad.reduce((s, k) => s + k.masuk, 0))}</td>
-                          <td className="num px-3 py-2.5 text-right text-berry-600">-{angka(kad.reduce((s, k) => s + k.keluar, 0))}</td>
-                          <td className="num px-3 py-2.5 text-right text-bark-900">{angka(item.stock)}</td>
+                        <tr className="bg-cream-200/80 font-bold">
+                          <td className="border border-coffee-500 px-3 py-2.5 text-bark-900" colSpan={2}>Jumlah</td>
+                          <td className="num border border-coffee-500 px-3 py-2.5 text-right text-leaf-700">+{angka(kad.reduce((s, k) => s + k.masuk, 0))}</td>
+                          <td className="num border border-coffee-500 px-3 py-2.5 text-right text-berry-600">-{angka(kad.reduce((s, k) => s + k.keluar, 0))}</td>
+                          <td className="num border border-coffee-500 px-3 py-2.5 text-right text-bark-900">{angka(item.stock)}</td>
                         </tr>
                       </tfoot>
                     </table>
                   </div>
                 )}
-                <p className="border-t border-cream-100 px-3 py-2 text-[11px] text-bark-700/50">Baki dikira mengikut tarikh. Baki akhir sentiasa sama dengan stok semasa.</p>
+                <div className="flex items-end justify-between gap-4 border-t border-cream-200 px-4 py-3">
+                  <p className="text-[11px] text-bark-700/50">Baki akhir sentiasa sama dengan stok semasa ({angka(item.stock)} {item.unit}).</p>
+                  <p className="shrink-0 text-[11px] text-bark-700/60">
+                    Disemak oleh: <span className="inline-block w-24 border-b border-bark-700/40" />
+                  </p>
+                </div>
               </Card>
             ) : (
               <Card className="divide-y divide-cream-100 px-4">
