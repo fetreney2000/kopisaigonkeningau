@@ -204,7 +204,11 @@ export default function App() {
 
   function handleLogin(u: User) {
     localStorage.setItem('me', JSON.stringify(u));
+    setAccountOpen(false); // jangan warisi modal terbuka daripada skrin log masuk
     setMe({ user: u, needs_setup: false });
+    // Selepas log masuk sentiasa ke dashboard, bukan halaman terakhir
+    if (window.location.hash !== '#/') window.location.hash = '/';
+    else window.scrollTo({ top: 0 });
   }
 
   if (loadError) {

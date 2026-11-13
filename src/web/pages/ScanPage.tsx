@@ -5,6 +5,7 @@ import { api } from '../api';
 import { angka, hariIni } from '../format';
 import { Button, Card, Field, inputCls, Modal, toast } from '../ui';
 import { ItemPickerField } from './ItemPicker';
+import { navigate } from '../App';
 import type { ItemWithStock } from '../../shared/types';
 
 function ConfirmCard({ item, method, onDone, onCancel }: {
@@ -224,7 +225,7 @@ export default function ScanPage() {
 
         {manualOpen && manualItem && (
           <div className="mt-4">
-            <ConfirmCard item={manualItem} method="manual" onDone={() => { setManualItem(null); setManualOpen(false); }} onCancel={() => setManualItem(null)} />
+            <ConfirmCard item={manualItem} method="manual" onDone={() => { setManualItem(null); setManualOpen(false); navigate('/'); }} onCancel={() => setManualItem(null)} />
           </div>
         )}
       </Card>
@@ -235,7 +236,7 @@ export default function ScanPage() {
           <ConfirmCard
             item={foundItem}
             method="scan"
-            onDone={reset}
+            onDone={() => { reset(); navigate('/'); }}
             onCancel={reset}
           />
         )}
