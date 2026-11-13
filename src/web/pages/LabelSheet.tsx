@@ -50,7 +50,6 @@ const PRESETS: Preset[] = [
 function LabelCell({ item, preset, cutLines }: { item: ItemWithStock; preset: Preset; cutLines: boolean }) {
   const px = Math.round(preset.qrMm * 3.78); // 1mm ≈ 3.78px pada skrin
   const nameSize = preset.layout === 'horizontal' ? (preset.key === 'small' ? '2.5mm' : '2.9mm') : '3.4mm';
-  const codeSize = preset.layout === 'horizontal' ? '1.8mm' : '2.1mm';
 
   return (
     <div
@@ -70,7 +69,6 @@ function LabelCell({ item, preset, cutLines }: { item: ItemWithStock; preset: Pr
         >
           {item.name}
         </div>
-        <div className="num font-mono font-bold text-coffee-500" style={{ fontSize: codeSize }}>{item.id}</div>
         {preset.layout === 'vertical' && (
           <div className="text-bark-700/70" style={{ fontSize: '1.7mm' }}>Imbas untuk merekod stok{item.unit ? ` · ${item.unit}` : ''}</div>
         )}
@@ -237,7 +235,7 @@ export default function LabelSheet() {
                       <input type="checkbox" checked={!!sel} onChange={() => toggle(it.id)} className="h-5 w-5 accent-[#3e2a1a]" />
                       <span className="min-w-0">
                         <span className="block truncate text-[15px] font-semibold text-bark-900">{it.name}</span>
-                        <span className="block text-xs text-bark-700/60">{SOURCE_LABEL[it.source]} · {it.id}</span>
+                        <span className="block text-[10px] text-bark-700/40">{SOURCE_LABEL[it.source]}<span className="num ml-1.5 font-mono">{it.id}</span></span>
                       </span>
                     </label>
                     {sel && (

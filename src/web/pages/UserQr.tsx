@@ -53,7 +53,6 @@ export default function UserQr() {
           <QRCodeImg value={data.code} size={200} />
           <div className="max-w-72 text-center">
             <div className="text-2xl font-extrabold leading-snug text-bark-900">{data.name}</div>
-            <div className="num mt-1 font-mono text-base font-bold tracking-wider text-coffee-500">{data.code}</div>
             <div className="mt-1.5 text-sm text-bark-700/70">
               Imbas untuk log masuk{data.position ? ` · ${data.position}` : ''}
             </div>

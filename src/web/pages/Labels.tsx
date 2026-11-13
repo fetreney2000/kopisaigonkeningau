@@ -29,7 +29,6 @@ export default function Labels({ itemId }: { itemId: string }) {
             <QRCodeImg value={item.id} size={200} />
             <div className="max-w-72 text-center">
               <div className="text-2xl font-extrabold leading-snug text-bark-900">{item.name}</div>
-              <div className="num mt-1 font-mono text-base font-bold tracking-wider text-coffee-500">{item.id}</div>
               <div className="mt-1.5 text-sm text-bark-700/70">
                 Imbas untuk merekod stok{item.unit ? ` · ${item.unit}` : ''}
               </div>

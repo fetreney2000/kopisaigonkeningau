@@ -304,7 +304,7 @@ function ItemDetailModal({ itemId, onClose, onChanged }: { itemId: string; onClo
             <QRCodeImg value={item.id} size={92} className="rounded-lg bg-white p-1.5 shadow-sm" />
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-1.5 text-xs font-semibold text-bark-700/60"><QrCode size={13} /> KOD ITEM</div>
-              <div className="num mt-0.5 font-mono text-[15px] font-bold text-bark-900">{item.id}</div>
+              <div className="num mt-0.5 font-mono text-[10px] tracking-wide text-bark-700/35">{item.id}</div>
               <p className="mt-1 text-xs text-bark-700/60">Imbas kod ini untuk merekod penggunaan.</p>
               <div className="mt-2 flex gap-2">
                 <Button variant="secondary" className="!min-h-9 !px-3 !text-xs" onClick={() => navigate(`/label/${item.id}`)}>

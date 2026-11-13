@@ -271,7 +271,7 @@ export default function UsersPage() {
           <div className="space-y-4 text-center">
             <div className="mx-auto w-fit rounded-2xl border-4 border-bark-900 bg-white px-8 py-6">
               <div className="text-lg font-extrabold text-bark-900">{qrModal.name}</div>
-              <div className="num mt-1 font-mono text-sm font-bold tracking-wider text-coffee-500">{qrModal.code}</div>
+              <div className="num mt-1 font-mono text-[10px] tracking-wider text-bark-700/40">{qrModal.code}</div>
             </div>
             <p className="text-sm text-bark-700/70">
               Kod ini adalah <b>kunci log masuk</b> — cetak dan simpan dengan selamat. Sesiapa yang memegangnya boleh log masuk
