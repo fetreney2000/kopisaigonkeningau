@@ -221,7 +221,7 @@ export default function LoginPage({ me, onLogin }: { me: AuthMe; onLogin: (u: Us
         )}
 
         <p className="mt-6 text-center text-xs leading-relaxed text-bark-700/50">
-          Data tersimpan dalam Cloudflare D1 · Sesi log masuk sah 30 hari
+          The Dotters · Sesi log masuk sah 30 hari
         </p>
       </div>
     </div>

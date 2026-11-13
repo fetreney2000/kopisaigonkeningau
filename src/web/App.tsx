@@ -92,7 +92,7 @@ function Sidebar({ route, onAccount }: { route: string; onAccount: () => void })
           </button>
         </div>
         <div className="px-2 text-[11px] leading-relaxed text-cream-50/35">
-          Data tersimpan dalam Cloudflare D1
+          The Dotters
         </div>
       </div>
     </aside>
