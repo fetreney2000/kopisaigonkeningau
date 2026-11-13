@@ -556,12 +556,7 @@ function ItemDetailModal({ itemId, onClose, onChanged }: { itemId: string; onClo
                     </table>
                   </div>
                 )}
-                <div className="flex items-end justify-between gap-4 border-t border-cream-200 px-4 py-3">
-                  <p className="text-[11px] text-bark-700/50">Baki akhir sentiasa sama dengan stok semasa ({angka(item.stock)} {item.unit}).</p>
-                  <p className="shrink-0 text-[11px] text-bark-700/60">
-                    Disemak oleh: <span className="inline-block w-24 border-b border-bark-700/40" />
-                  </p>
-                </div>
+                <p className="border-t border-cream-200 px-4 py-3 text-[11px] text-bark-700/50">Baki akhir sentiasa sama dengan stok semasa ({angka(item.stock)} {item.unit}).</p>
               </Card>
             ) : (
               <Card className="divide-y divide-cream-100 px-4">
