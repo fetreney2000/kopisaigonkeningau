@@ -138,8 +138,8 @@ function BottomNav({ route }: { route: string }) {
 
 // ------------------------------------------------------------------ bar atas mudah alih
 
-/** Ikon Pengguna (admin) + Akaun — akses log keluar & tukar kata laluan pada telefon */
-function MobileHeader({ title, onAccount }: { title: string; onAccount: () => void }) {
+/** Bar atas telefon: jenama + ikon Pengguna (admin) + Akaun */
+function MobileHeader({ onAccount }: { onAccount: () => void }) {
   const { user } = useAuth();
   const admin = isAdmin(user);
 
@@ -148,8 +148,11 @@ function MobileHeader({ title, onAccount }: { title: string; onAccount: () => vo
       <div className="rounded-lg bg-bark-800 p-1.5 text-cream-50">
         <Coffee size={16} />
       </div>
-      <span className="text-base font-bold text-bark-900">{title}</span>
-      <span className="ml-auto flex items-center gap-1">
+      <div className="min-w-0 flex-1 leading-tight">
+        <div className="truncate text-[15px] font-extrabold text-bark-900">Kopi Saigon Keningau</div>
+        <div className="truncate text-[10px] text-bark-700/55">Tiada Hari Tanpa Kopi</div>
+      </div>
+      <span className="flex items-center gap-1">
         {admin && (
           <button
             onClick={() => navigate('/pengguna')}
@@ -270,26 +273,14 @@ export default function App() {
     }
   }
 
-  const items = navFor(me.user);
-  const known = items.find((n) => n.path === base);
-  const title = labelMatch
-    ? 'Label Kod QR'
-    : base === '/label'
-      ? 'Cetak Label Pukal'
-      : base === '/pengguna' && admin
-        ? 'Pengguna'
-        : base === '/cetak-qr-pengguna'
-          ? 'Cetak QR Pengguna'
-          : known?.label ?? (admin ? 'Utama' : 'Imbas');
-
   return (
     <AuthProvider user={me.user} setUser={(u) => setMe({ user: u, needs_setup: false })}>
       <div className="min-h-screen md:pl-64 print-reset">
         <Sidebar route={base} onAccount={() => setAccountOpen(true)} />
         <BottomNav route={base} />
 
-        {/* Bar atas mudah alih — akses Pengguna (admin) + Akaun */}
-        <MobileHeader title={title} onAccount={() => setAccountOpen(true)} />
+        {/* Bar atas mudah alih — jenama + akses Pengguna (admin) + Akaun */}
+        <MobileHeader onAccount={() => setAccountOpen(true)} />
 
         <main className="mx-auto w-full max-w-5xl px-4 pb-28 pt-4 md:px-10 md:pb-12 md:pt-8">{page}</main>
         <AccountModal open={accountOpen} onClose={() => setAccountOpen(false)} />
