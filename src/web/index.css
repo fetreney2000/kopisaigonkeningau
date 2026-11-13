@@ -46,11 +46,11 @@ body {
   font-variant-numeric: tabular-nums lining-nums;
 }
 
-/* Gaya segi empat — tiada penjuru melengkung di mana-mana */
+/* Gaya penjuru 4px — seragam di mana-mana */
 *,
 *::before,
 *::after {
-  border-radius: 0 !important;
+  border-radius: 4px !important;
 }
 /* Pengecualian: spinner mesti kekal bulat supaya kesan berpusing kelihatan betul */
 .animate-spin {
