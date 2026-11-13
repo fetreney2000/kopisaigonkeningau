@@ -15,7 +15,7 @@ Sistem inventori ringkas untuk kedai kopi — dibina khas untuk menjejak dua sum
 | **Papan Pemuka** | Nilai stok, belanja bulan ini (pecahan francais/tempatan), amaran stok, aktiviti terkini, unjuran 30 hari |
 | **Inventori** | Senarai item dengan carian + tapis (Semua / Francais / Tempatan / Perlu Dipesan), status automatik: *Cukup / Hampir Rendah / Stok Rendah / Habis* |
 | **Imbas (QR)** | Imbas kod QR item dengan kamera telefon → sahkan kuantiti → stok keluar/kemas direkod. Borang manual disediakan jika kamera tiada |
-| **Kod QR** | Setiap item mendapat kod QR unik yang kekal sah; label boleh dicetak satu-satu atau **berpukal berGRID pada helaian A4** (4 preset sehingga 45 label/lembar, termasuk se padan Avery L4737 27/lembar), atau dimuat turun sebagai PNG |
+| **Kod QR** | Setiap item mendapat kod QR unik yang kekal sah; label boleh dicetak satu-satu atau **berpukal berGRID pada helaian A4** (6 susun atur dari 4 hingga 45 label/lembar) |
 | **Pembelian** | Rekod belian baru (kuantiti, kos seunit, tarikh, nota) — stok dan kos seunit item dikemas kini automatik; boleh batalkan rekod tersasar |
 | **Laporan** | Belanja & kos penggunaan bulanan (carta), unjuran kos 30 hari akan datang, unjuran per item (purata harian, baki hari), penggunaan tertinggi, eksport CSV |
 | **Pelarasan** | Betulkan beza kiraan fizikal (rosak, hilang, pembetulan) — diasingkan daripada pergerakan biasa supaya sejarah mudah diaudit |
@@ -32,7 +32,7 @@ Sistem inventori ringkas untuk kedai kopi — dibina khas untuk menjejak dua sum
 
 1. **Tambah item** (`Inventori` → ➕) — tetapkan sumber (Francais / Kedai Tempatan), kos seunit, dan *stok minimum* (paras amaran).
 2. **Cetak label QR** — buka item → *Cetak Label* untuk satu label, atau `Inventori` → *Cetak Label* untuk **cetak pukal berGRID**
-   (pilih item + bilangan salinan, preset saiz: Besar 8 / Biasa 15 / Avery L4737 27 / Kecil 45 label selembar A4 — jimat kertas).
+   (pilih item + bilangan salinan, preset saiz: Gergasi 4 / Besar 8 / Biasa 15 / Sederhana 18 / Padat 24 / Kecil 45 label selembar A4 - jimat kertas).
    Kod QR mengandungi kod item (cth. `SG-K7X2QP4M`); nama item dicetak di bawah kod.
 3. **Bila barang sampai** → `Pembelian` → rekod kuantiti + kos. Stok naik, belanja bulanan terkini.
 4. **Bila barang digunakan** → imbas QR item dengan telefon → sahkan kuantiti → stok turun. Tiada kamera? Guna borang manual.

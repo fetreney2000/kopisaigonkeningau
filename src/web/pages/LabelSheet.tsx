@@ -21,23 +21,30 @@ interface Preset {
   pad: [number, number, number, number];
   qrMm: number;
   layout: 'vertical' | 'horizontal';
-  avery?: string;
 }
 
-// A4 = 210 × 297 mm. Kawasan cetakan selamat dipastikan >= 10mm dari tepi kertas.
+// A4 = 210 x 297 mm. Kawasan cetakan selamat >= 10mm dari tepi kertas.
+// Semua grid di bawah muat dalam 190 x 277 mm (A4 tolak margin 10mm setiap sisi).
 const PRESETS: Preset[] = [
+  {
+    key: 'giant', label: 'Gergasi', note: '4 label / lembar, bekas sangat besar',
+    cols: 2, rows: 2, cellW: 92.5, cellH: 130, gap: 5, pad: [10, 10, 10, 10], qrMm: 46, layout: 'vertical',
+  },
   {
     key: 'big', label: 'Besar', note: '8 label / lembar, bekas besar',
     cols: 2, rows: 4, cellW: 92.5, cellH: 64, gap: 5, pad: [10, 10, 10, 10], qrMm: 32, layout: 'vertical',
   },
   {
-    key: 'normal', label: 'Biasa', note: '15 label / lembar, kebanyakan item',
+    key: 'normal', label: 'Biasa', note: '15 label / lembar, kegunaan harian',
     cols: 3, rows: 5, cellW: 60.6, cellH: 52, gap: 4, pad: [10, 10, 10, 10], qrMm: 26, layout: 'vertical',
   },
   {
-    key: 'avery', label: 'Avery L4737', note: '27 label / lembar, pelekat siap potong',
-    cols: 3, rows: 9, cellW: 63.5, cellH: 29.6, gap: 0, pad: [15.3, 9.75, 15.3, 9.75], qrMm: 21, layout: 'horizontal',
-    avery: 'Avery L4737 / L6004 (63.5 × 29.6 mm)',
+    key: 'medium', label: 'Sederhana', note: '18 label / lembar, grid 3 × 6',
+    cols: 3, rows: 6, cellW: 60.6, cellH: 42.5, gap: 4, pad: [10, 10, 10, 10], qrMm: 23, layout: 'vertical',
+  },
+  {
+    key: 'compact', label: 'Padat', note: '24 label / lembar, grid 4 × 6',
+    cols: 4, rows: 6, cellW: 44.5, cellH: 43.5, gap: 3, pad: [10, 10, 10, 10], qrMm: 20, layout: 'horizontal',
   },
   {
     key: 'small', label: 'Kecil', note: '45 label / lembar, bekas kecil (imbas dekat)',
@@ -49,7 +56,9 @@ const PRESETS: Preset[] = [
 
 function LabelCell({ item, preset, cutLines }: { item: ItemWithStock; preset: Preset; cutLines: boolean }) {
   const px = Math.round(preset.qrMm * 3.78); // 1mm ≈ 3.78px pada skrin
-  const nameSize = preset.layout === 'horizontal' ? (preset.key === 'small' ? '2.5mm' : '2.9mm') : '3.4mm';
+  const nameSize = preset.layout === 'horizontal'
+    ? (preset.key === 'small' ? '2.5mm' : '2.9mm')
+    : (preset.key === 'giant' ? '4.5mm' : '3.4mm');
 
   return (
     <div
@@ -159,7 +168,7 @@ export default function LabelSheet() {
           <div className="grid gap-4 md:grid-cols-[1fr_auto]">
             <div>
               <span className="mb-1.5 block text-sm font-semibold text-bark-800">Susun Atur Helaian</span>
-              <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+              <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
                 {PRESETS.map((p) => (
                   <button
                     key={p.key}
@@ -173,9 +182,6 @@ export default function LabelSheet() {
                   </button>
                 ))}
               </div>
-              {preset.avery && (
-                <p className="mt-2 text-xs text-leaf-700">✓ Se padan dengan pelekat {preset.avery}, tampal terus, tiada potongan diperlukan.</p>
-              )}
             </div>
             <div className="flex items-end">
               <button
