@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import { BarChart3, Boxes, Coffee, Home, ScanLine, ShoppingCart, UserRound, Users } from 'lucide-react';
+import { BarChart3, Boxes, Home, ScanLine, ShoppingCart, UserRound, Users } from 'lucide-react';
 import { Toaster, Spinner } from './ui';
 import { api } from './api';
 import { AuthProvider, useAuth, isAdmin, type SessionUser } from './auth';
@@ -59,8 +59,8 @@ function Sidebar({ route, onAccount }: { route: string; onAccount: () => void })
   return (
     <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col bg-bark-900 px-4 py-6 md:flex no-print">
       <div className="mb-8 flex items-center gap-3 px-2">
-        <div className="rounded-xl bg-coffee-500 p-2 text-cream-50">
-          <Coffee size={22} />
+        <div className="rounded-xl bg-cream-100 p-1.5">
+          <img src="/logo.svg" alt="" className="h-9 w-9" />
         </div>
         <div>
           <div className="font-bold text-cream-50">Kopi Saigon Keningau</div>
@@ -145,9 +145,7 @@ function MobileHeader({ onAccount }: { onAccount: () => void }) {
 
   return (
     <header className="sticky top-0 z-20 flex items-center gap-2.5 border-b border-cream-200 bg-cream-100/90 px-4 py-2.5 backdrop-blur md:hidden no-print">
-      <div className="rounded-lg bg-bark-800 p-1.5 text-cream-50">
-        <Coffee size={16} />
-      </div>
+      <img src="/logo.svg" alt="" className="h-8 w-8" />
       <div className="min-w-0 flex-1 leading-tight">
         <div className="truncate text-[15px] font-extrabold text-bark-900">Kopi Saigon Keningau</div>
         <div className="truncate text-[10px] text-bark-700/55">Tiada Hari Tanpa Kopi</div>

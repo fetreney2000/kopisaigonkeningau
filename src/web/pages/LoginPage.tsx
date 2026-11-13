@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import QrScanner from 'qr-scanner';
-import { CameraOff, Coffee, KeyRound, LogIn, ScanLine } from 'lucide-react';
+import { CameraOff, KeyRound, LogIn, ScanLine } from 'lucide-react';
 import { api } from '../api';
 import { Button, Field, inputCls, Modal, Segmented, Spinner, toast } from '../ui';
 import type { AuthMe, User } from '../../shared/types';
@@ -171,9 +171,7 @@ export default function LoginPage({ me, onLogin }: { me: AuthMe; onLogin: (u: Us
     <div className="flex min-h-screen items-center justify-center bg-cream-100 px-4 py-10">
       <div className="w-full max-w-md">
         <div className="mb-6 flex flex-col items-center gap-3 text-center">
-          <div className="rounded-xl bg-bark-800 p-3 text-cream-50">
-            <Coffee size={28} />
-          </div>
+          <img src="/logo.svg" alt="Logo Kopi Saigon" className="h-16 w-16" />
           <div>
             <h1 className="text-2xl font-extrabold text-bark-900">Kopi Saigon Keningau</h1>
             <p className="text-sm text-bark-700/60">Tiada Hari Tanpa Kopi</p>
