@@ -247,6 +247,7 @@ function HistoryRow({ icon, cls, main, sub, right }: { icon: React.ReactNode; cl
 function ItemDetailModal({ itemId, onClose, onChanged }: { itemId: string; onClose: () => void; onChanged: () => void }) {
   const { data, loading, error, reload } = useApi<ItemDetail>(`/api/items/${itemId}`);
   const [move, setMove] = useState<'purchase' | 'usage' | 'adjust' | null>(null);
+  const [tab, setTab] = useState<'kad' | 'senarai'>('kad');
   const [edit, setEdit] = useState(false);
   const [confirmDel, setConfirmDel] = useState(false);
 
@@ -266,6 +267,24 @@ function ItemDetailModal({ itemId, onClose, onChanged }: { itemId: string; onClo
     for (const u of data.usages) rows.push({ kind: 'usage', id: u.id, main: u.method === 'scan' ? 'Stok Keluar (imbas)' : 'Stok Keluar', sub: `${tarikh(u.date)}${u.note ? ` · ${u.note}` : ''}`, right: `−${angka(u.qty)}`, neg: true, ts: Date.parse(u.created_at) });
     for (const a of data.adjustments) rows.push({ kind: 'adjust', id: a.id, main: 'Pelarasan', sub: `${tarikh(a.date)}${a.reason ? ` · ${a.reason}` : ''}`, right: `${a.delta > 0 ? '+' : '−'}${angka(Math.abs(a.delta))}`, neg: a.delta < 0, ts: Date.parse(a.created_at) });
     return rows.sort((x, y) => y.ts - x.ts).slice(0, 25);
+  }, [data]);
+
+  // Kad Stok: lejar berjalan mengikut tarikh. Baki awal = stok semasa tolak
+  // jumlah pergerakan dalam rekod, supaya baki akhir tepat sama dengan stok semasa.
+  const kad = useMemo(() => {
+    if (!data) return [];
+    type Ev = { date: string; ts: number; desc: string; masuk: number; keluar: number };
+    const evs: Ev[] = [];
+    for (const p of data.purchases) evs.push({ date: p.date, ts: Date.parse(p.created_at), desc: `Stok Masuk${p.note ? `: ${p.note}` : ''}`, masuk: p.qty, keluar: 0 });
+    for (const u of data.usages) evs.push({ date: u.date, ts: Date.parse(u.created_at), desc: `Stok Keluar${u.method === 'scan' ? ' (imbas)' : ''}${u.note ? `: ${u.note}` : ''}`, masuk: 0, keluar: u.qty });
+    for (const a of data.adjustments) evs.push({ date: a.date, ts: Date.parse(a.created_at), desc: `Pelarasan${a.reason ? `: ${a.reason}` : ''}`, masuk: a.delta > 0 ? a.delta : 0, keluar: a.delta < 0 ? -a.delta : 0 });
+    evs.sort((x, y) => x.date.localeCompare(y.date) || x.ts - y.ts);
+    const net = evs.reduce((s, e) => s + e.masuk - e.keluar, 0);
+    let baki = data.item.stock - net;
+    return evs.map((e) => {
+      baki += e.masuk - e.keluar;
+      return { ...e, baki };
+    });
   }, [data]);
 
   const item = data?.item;
@@ -465,22 +484,75 @@ function ItemDetailModal({ itemId, onClose, onChanged }: { itemId: string; onClo
             <Button variant="secondary" onClick={() => setMove('adjust')}><SlidersHorizontal size={17} /> Laras</Button>
           </div>
 
-          {/* Sejarah */}
+          {/* Kad Stok / Sejarah */}
           <div>
-            <SectionTitle>Sejarah Terkini</SectionTitle>
-            <Card className="divide-y divide-cream-100 px-4">
-              {history.length === 0 && <p className="py-4 text-center text-sm text-bark-700/50">Tiada rekod lagi.</p>}
-              {history.map((h, i) => (
-                <HistoryRow
-                  key={`${h.kind}-${h.id}-${i}`}
-                  icon={h.kind === 'purchase' ? <PackagePlus size={15} /> : h.kind === 'usage' ? <PackageMinus size={15} /> : <SlidersHorizontal size={15} />}
-                  cls={h.kind === 'purchase' ? 'bg-leaf-100 text-leaf-700' : h.kind === 'usage' ? 'bg-cream-200 text-coffee-500' : 'bg-cream-200 text-bark-700'}
-                  main={h.main}
-                  sub={h.sub}
-                  right={h.right}
-                />
+            <SectionTitle>Rekod Pergerakan</SectionTitle>
+            <div className="mb-2.5 flex gap-1.5">
+              {(['kad', 'senarai'] as const).map((t) => (
+                <button
+                  key={t}
+                  onClick={() => setTab(t)}
+                  className={tab === t ? 'bg-coffee-500 px-3.5 py-1.5 text-xs font-bold text-white' : 'bg-cream-100 px-3.5 py-1.5 text-xs font-semibold text-bark-700 hover:bg-cream-200'}
+                >
+                  {t === 'kad' ? 'Kad Stok' : 'Senarai'}
+                </button>
               ))}
-            </Card>
+            </div>
+            {tab === 'kad' ? (
+              <Card className="overflow-hidden">
+                {kad.length === 0 ? (
+                  <p className="py-4 text-center text-sm text-bark-700/50">Tiada rekod lagi.</p>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full min-w-[520px] text-sm">
+                      <thead>
+                        <tr className="border-b border-cream-200 text-left text-[11px] uppercase tracking-wide text-bark-700/60">
+                          <th className="px-3 py-2.5 font-semibold">Tarikh</th>
+                          <th className="px-3 py-2.5 font-semibold">Butiran</th>
+                          <th className="num px-3 py-2.5 text-right font-semibold">Masuk</th>
+                          <th className="num px-3 py-2.5 text-right font-semibold">Keluar</th>
+                          <th className="num px-3 py-2.5 text-right font-semibold">Baki</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-cream-100">
+                        {kad.map((k, i) => (
+                          <tr key={i}>
+                            <td className="num whitespace-nowrap px-3 py-2.5 text-bark-700">{tarikh(k.date)}</td>
+                            <td className="px-3 py-2.5 text-bark-900">{k.desc}</td>
+                            <td className="num whitespace-nowrap px-3 py-2.5 text-right text-leaf-700">{k.masuk > 0 ? `+${angka(k.masuk)}` : ''}</td>
+                            <td className="num whitespace-nowrap px-3 py-2.5 text-right text-berry-600">{k.keluar > 0 ? `-${angka(k.keluar)}` : ''}</td>
+                            <td className="num whitespace-nowrap px-3 py-2.5 text-right font-bold text-bark-900">{angka(k.baki)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                      <tfoot>
+                        <tr className="border-t border-cream-200 bg-cream-100/60 font-bold">
+                          <td className="px-3 py-2.5" colSpan={2}>Jumlah</td>
+                          <td className="num px-3 py-2.5 text-right text-leaf-700">+{angka(kad.reduce((s, k) => s + k.masuk, 0))}</td>
+                          <td className="num px-3 py-2.5 text-right text-berry-600">-{angka(kad.reduce((s, k) => s + k.keluar, 0))}</td>
+                          <td className="num px-3 py-2.5 text-right text-bark-900">{angka(item.stock)}</td>
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </div>
+                )}
+                <p className="border-t border-cream-100 px-3 py-2 text-[11px] text-bark-700/50">Baki dikira mengikut tarikh. Baki akhir sentiasa sama dengan stok semasa.</p>
+              </Card>
+            ) : (
+              <Card className="divide-y divide-cream-100 px-4">
+                {history.length === 0 && <p className="py-4 text-center text-sm text-bark-700/50">Tiada rekod lagi.</p>}
+                {history.map((h, i) => (
+                  <HistoryRow
+                    key={`${h.kind}-${h.id}-${i}`}
+                    icon={h.kind === 'purchase' ? <PackagePlus size={15} /> : h.kind === 'usage' ? <PackageMinus size={15} /> : <SlidersHorizontal size={15} />}
+                    cls={h.kind === 'purchase' ? 'bg-leaf-100 text-leaf-700' : h.kind === 'usage' ? 'bg-cream-200 text-coffee-500' : 'bg-cream-200 text-bark-700'}
+                    main={h.main}
+                    sub={h.sub}
+                    right={h.right}
+                  />
+                ))}
+              </Card>
+            )}
           </div>
 
           {/* Sunting / padam */}
