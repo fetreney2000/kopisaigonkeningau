@@ -182,6 +182,8 @@ const adminOnly: MiddlewareHandler = async (c, next) => {
 function staffAllowed(path: string, method: string): boolean {
   if (method === 'GET' && (path === '/api/staff/home' || path === '/api/items' || path.startsWith('/api/items/lookup/'))) return true;
   if (method === 'POST' && path === '/api/usages') return true;
+  // Tukar kod QR sendiri; pengendali menyemak pemilik
+  if (method === 'POST' && /^\/api\/users\/[^/]+\/rotate-qr$/.test(path)) return true;
   return false;
 }
 
@@ -446,8 +448,11 @@ api.post('/users/:id/reset-password', adminOnly, async (c) => {
   return c.json({ password }); // dipaparkan sekali sahaja
 });
 
-api.post('/users/:id/rotate-qr', adminOnly, async (c) => {
+api.post('/users/:id/rotate-qr', requireAuth, async (c) => {
+  const me = c.get('user')!;
   const id = c.req.param('id');
+  // Setiap pengguna boleh tukar kod sendiri; admin boleh tukar kod sesiapa
+  if (id !== me.id && me.role !== 'admin') return jsonError('Tiada kebenaran (admin sahaja)', 403);
   const target = await c.env.DB.prepare('SELECT id FROM users WHERE id = ?1 AND archived = 0').bind(id).first();
   if (!target) return jsonError('Pengguna tidak dijumpai', 404);
   const qrCode = genId('USR', 12); // 60 bit entropi, sama seperti penciptaan pengguna

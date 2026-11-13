@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { KeyRound, LogOut, ShieldCheck } from 'lucide-react';
+import { KeyRound, LogOut, QrCode, ShieldCheck } from 'lucide-react';
 import { api } from '../api';
 import { useAuth, isAdmin } from '../auth';
 import { Badge, Button, Field, inputCls, Modal, Spinner, toast } from '../ui';
+import { QrLoginModal, type UserQrData } from './UserQr';
 
 /** Modal akaun saya - info pengguna + tukar kata laluan + log keluar */
 export default function AccountModal({ open, onClose }: { open: boolean; onClose: () => void }) {
@@ -12,11 +13,15 @@ export default function AccountModal({ open, onClose }: { open: boolean; onClose
   const [confirm, setConfirm] = useState('');
   const [saving, setSaving] = useState(false);
   const [showForm, setShowForm] = useState(false);
+  const [qrConfirm, setQrConfirm] = useState(false);
+  const [qrData, setQrData] = useState<UserQrData | null>(null);
+  const [rotating, setRotating] = useState(false);
 
   // Reset borang bila modal ditutup/dibuka
   useEffect(() => {
     if (!open) {
       setCurrent(''); setNext(''); setConfirm(''); setSaving(false); setShowForm(false);
+      setQrConfirm(false); setQrData(null); setRotating(false);
     }
   }, [open]);
 
@@ -51,6 +56,20 @@ export default function AccountModal({ open, onClose }: { open: boolean; onClose
     window.location.hash = '/';
   }
 
+  async function rotateMyQr() {
+    if (!user) return;
+    setRotating(true);
+    try {
+      const res = await api.post<{ qr_code: string }>(`/api/users/${user.id}/rotate-qr`, {});
+      setQrConfirm(false);
+      setQrData({ name: user.full_name, username: user.username, position: user.position, code: res.qr_code });
+    } catch (e) {
+      toast(e instanceof Error ? e.message : 'Ralat', 'error');
+    } finally {
+      setRotating(false);
+    }
+  }
+
   if (!user) return null;
 
   return (
@@ -67,6 +86,18 @@ export default function AccountModal({ open, onClose }: { open: boolean; onClose
           <Badge className={isAdmin(user) ? 'bg-bark-800 text-cream-100' : 'bg-cream-200 text-bark-700'}>
             {isAdmin(user) ? 'Admin' : 'Staff'}
           </Badge>
+        </div>
+
+        {/* Kad QR log masuk */}
+        <div className="rounded-xl border border-cream-300 px-4 py-3.5">
+          <div className="text-sm font-bold text-bark-900">Kad QR Log Masuk</div>
+          <p className="mt-1 text-xs leading-relaxed text-bark-700/60">
+            Sistem tidak menyimpan imej kad, jadi ia hanya dipaparkan semasa dijana. Jika kad hilang, jana yang baharu di
+            sini - kod lama terus tidak sah.
+          </p>
+          <Button variant="secondary" full className="mt-3" onClick={() => setQrConfirm(true)}>
+            <QrCode size={17} /> Jana Kod QR Baharu
+          </Button>
         </div>
 
         {/* Tukar kata laluan */}
@@ -102,6 +133,24 @@ export default function AccountModal({ open, onClose }: { open: boolean; onClose
           <LogOut size={17} /> Log Keluar
         </Button>
       </div>
+
+      {/* Sahkan jana kod QR sendiri */}
+      <Modal open={qrConfirm} onClose={() => setQrConfirm(false)} title="Jana Kod QR Baharu">
+        <div className="space-y-4">
+          <p className="text-[15px] text-bark-800">
+            Jana kod QR log masuk baharu untuk akaun anda? Kad lama <b>terus tidak sah</b> - cetak kad baharu sebelum menutup
+            modal.
+          </p>
+          <div className="flex gap-3">
+            <Button variant="secondary" full onClick={() => setQrConfirm(false)}>Batal</Button>
+            <Button full onClick={rotateMyQr} disabled={rotating}>
+              {rotating ? <Spinner small /> : 'Jana Kod Baharu'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      <QrLoginModal data={qrData} onClose={() => setQrData(null)} />
     </Modal>
   );
 }

@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { Printer } from 'lucide-react';
 import QRCodeImg from './QRCodeImg';
-import { Button } from '../ui';
+import { Button, Modal } from '../ui';
 import { navigate } from '../App';
 
 /** Data kod QR pengguna dihantar melalui sessionStorage (dipaparkan sekali sahaja oleh admin) */
@@ -25,6 +25,33 @@ export function takeUserQrData(): UserQrData | null {
   } catch {
     return null;
   }
+}
+
+/** Modal paparan kod QR baharu (dipakai oleh halaman Pengguna dan modal Akaun) */
+export function QrLoginModal({ data, onClose }: { data: UserQrData | null; onClose: () => void }) {
+  return (
+    <Modal open={!!data} onClose={onClose} title="Kod QR Log Masuk">
+      {data && (
+        <div className="space-y-4 text-center">
+          <div className="mx-auto w-fit rounded-2xl border-4 border-bark-900 bg-white px-8 py-6">
+            <QRCodeImg value={data.code} size={180} />
+            <div className="mt-3 text-lg font-extrabold text-bark-900">{data.name}</div>
+            <div className="num mt-1 font-mono text-[10px] tracking-wider text-bark-700/40">{data.code}</div>
+          </div>
+          <p className="text-sm text-bark-700/70">
+            Kod ini adalah <b>kunci log masuk</b>. Cetak dan simpan dengan selamat. Sesiapa yang memegangnya boleh log masuk
+            sebagai pengguna ini. Sistem tidak menyimpan imej kad, jadi cetak sekarang sebelum menutup.
+          </p>
+          <div className="flex gap-3">
+            <Button variant="secondary" full onClick={onClose}>Selesai</Button>
+            <Button full onClick={() => { setUserQrData(data); onClose(); navigate('/cetak-qr-pengguna'); }}>
+              <Printer size={17} /> Cetak QR
+            </Button>
+          </div>
+        </div>
+      )}
+    </Modal>
+  );
 }
 
 /** Halaman cetak kod QR log masuk pengguna (#/cetak-qr-pengguna) */

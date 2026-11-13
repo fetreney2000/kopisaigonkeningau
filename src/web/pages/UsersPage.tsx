@@ -1,10 +1,9 @@
 import { useState } from 'react';
-import { KeyRound, Eye, EyeOff, Plus, Printer, QrCode, ShieldCheck, UserRound, UserRoundCheck, UserRoundPen, UserRoundX } from 'lucide-react';
+import { KeyRound, Eye, EyeOff, Plus, QrCode, ShieldCheck, UserRound, UserRoundCheck, UserRoundPen, UserRoundX } from 'lucide-react';
 import { api, useApi } from '../api';
 import { tarikh } from '../format';
 import { Badge, Button, Card, EmptyState, Field, inputCls, Modal, Spinner, toast } from '../ui';
-import { setUserQrData } from './UserQr';
-import { navigate } from '../App';
+import { QrLoginModal } from './UserQr';
 import type { User } from '../../shared/types';
 
 const ROLE_LABEL: Record<User['role'], string> = { admin: 'Admin', staff: 'Staff' };
@@ -171,6 +170,7 @@ export default function UsersPage() {
   const [pwModal, setPwModal] = useState<User | null>(null);
   const [newPassword, setNewPassword] = useState<string | null>(null);
   const [disableUser, setDisableUser] = useState<User | null>(null);
+  const [rotateUser, setRotateUser] = useState<User | null>(null);
 
   const users = data?.users ?? [];
   const active = users.filter((u) => !u.archived);
@@ -256,8 +256,8 @@ export default function UsersPage() {
                 </span>
               ) : (
                 <span className="flex shrink-0 flex-wrap gap-1.5">
-                  <button onClick={() => rotateQr(u)} className="flex h-9 items-center gap-1.5 rounded-lg border border-cream-300 bg-white px-2.5 text-xs font-semibold text-bark-700 hover:bg-cream-100" title="Jana kod QR baharu">
-                    <QrCode size={15} /> Kod QR
+                  <button onClick={() => setRotateUser(u)} className="flex h-9 items-center gap-1.5 rounded-lg border border-cream-300 bg-white px-2.5 text-xs font-semibold text-bark-700 hover:bg-cream-100" title="Jana kod QR log masuk baharu">
+                    <QrCode size={15} /> Tukar Kod QR
                   </button>
                   <button onClick={() => { setPwModal(u); setNewPassword(null); }} className="flex h-9 items-center gap-1.5 rounded-lg border border-cream-300 bg-white px-2.5 text-xs font-semibold text-bark-700 hover:bg-cream-100" title="Tetapkan semula kata laluan">
                     <KeyRound size={15} /> Reset
@@ -292,27 +292,24 @@ export default function UsersPage() {
         onSaved={reload}
       />
 
-      {/* Modal kod QR (dipaparkan sekali sahaja selepas dicipta/jana) */}
-      <Modal open={!!qrModal} onClose={() => setQrModal(null)} title="Kod QR Log Masuk">
-        {qrModal && (
-          <div className="space-y-4 text-center">
-            <div className="mx-auto w-fit rounded-2xl border-4 border-bark-900 bg-white px-8 py-6">
-              <div className="text-lg font-extrabold text-bark-900">{qrModal.name}</div>
-              <div className="num mt-1 font-mono text-[10px] tracking-wider text-bark-700/40">{qrModal.code}</div>
-            </div>
-            <p className="text-sm text-bark-700/70">
-              Kod ini adalah <b>kunci log masuk</b>. Cetak dan simpan dengan selamat. Sesiapa yang memegangnya boleh log masuk
-              sebagai pengguna ini. Jika hilang, gunakan <b>Tukar Kod QR</b> untuk menjana yang baharu (kod lama terus tidak sah).
+      {/* Sahkan tukar kod QR */}
+      <Modal open={!!rotateUser} onClose={() => setRotateUser(null)} title="Tukar Kod QR Log Masuk">
+        {rotateUser && (
+          <div className="space-y-4">
+            <p className="text-[15px] text-bark-800">
+              Jana kod QR log masuk baharu untuk <b>{rotateUser.full_name}</b>? Kad yang lama <b>terus tidak sah</b> - pastikan
+              kad baharu dicetak sebelum menutup modal.
             </p>
             <div className="flex gap-3">
-              <Button variant="secondary" full onClick={() => setQrModal(null)}>Selesai</Button>
-              <Button full onClick={() => { setUserQrData(qrModal); navigate('/cetak-qr-pengguna'); }}>
-                <Printer size={17} /> Cetak QR
-              </Button>
+              <Button variant="secondary" full onClick={() => setRotateUser(null)}>Batal</Button>
+              <Button full onClick={() => { const u = rotateUser; setRotateUser(null); void rotateQr(u); }}>Jana Kod Baharu</Button>
             </div>
           </div>
         )}
       </Modal>
+
+      {/* Modal kod QR (dipaparkan sekali sahaja selepas dicipta/jana) */}
+      <QrLoginModal data={qrModal} onClose={() => setQrModal(null)} />
 
       {/* Sahkan reset kata laluan */}
       <Modal open={!!pwModal && !newPassword} onClose={() => setPwModal(null)} title="Tetapkan Semula Kata Laluan">
