@@ -140,11 +140,16 @@ function MovementModal({ kind, item, onClose, onSaved }: {
       setErr('Kuantiti mesti melebihi sifar.');
       return;
     }
+    const k = parseFloat(cost);
+    if (kind === 'purchase' && (!k || k <= 0)) {
+      setErr('Kos seunit mesti lebih daripada sifar.');
+      return;
+    }
     setSaving(true);
     setErr('');
     try {
       if (kind === 'purchase') {
-        await api.post('/api/purchases', { item_id: item.id, qty: q, unit_cost: parseFloat(cost) || 0, date, note });
+        await api.post('/api/purchases', { item_id: item.id, qty: q, unit_cost: k, date, note });
       } else if (kind === 'usage') {
         await api.post('/api/usages', { item_id: item.id, qty: q, date, note });
       } else {
@@ -213,8 +218,8 @@ function MovementModal({ kind, item, onClose, onSaved }: {
           </Field>
         )}
 
-        {kind === 'usage' && item.stock > 0 && (parseFloat(qty) || 0) > item.stock && (
-          <p className="text-sm font-medium text-amber-warn">⚠ Kuantiti melebihi stok semasa. Pastikan ini betul.</p>
+        {kind === 'usage' && (parseFloat(qty) || 0) > item.stock && (
+          <p className="text-sm font-medium text-amber-warn">⚠ Kuantiti melebihi stok semasa dan akan ditolak. Laraskan stok dahulu jika kiraan fizikal berbeza.</p>
         )}
 
         {err && <p className="text-sm font-medium text-berry-600">{err}</p>}
@@ -304,8 +309,9 @@ function ItemDetailModal({ itemId, onClose, onChanged }: { itemId: string; onClo
     }
     let useQty = 0, useRm = 0, useN = 0, use30 = 0, scanN = 0, lastUse: string | null = null;
     for (const u of data.usages) {
-      useQty += u.qty; useRm += u.qty * uc; useN += 1;
-      if (u.date >= since30) use30 += u.qty * uc;
+      const cost = u.unit_cost ?? uc; // kos snapshot pada baris penggunaan
+      useQty += u.qty; useRm += u.qty * cost; useN += 1;
+      if (u.date >= since30) use30 += u.qty * cost;
       if (u.method === 'scan') scanN += 1;
       if (!lastUse || u.date > lastUse) lastUse = u.date;
     }

@@ -44,6 +44,7 @@ export interface Usage {
   id: string;
   item_id: string;
   qty: number;
+  unit_cost: number;
   date: string;
   method: 'scan' | 'manual';
   note: string;

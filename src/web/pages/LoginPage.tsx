@@ -13,6 +13,7 @@ function SetupForm({ onDone }: { onDone: (u: User) => void }) {
   const [position, setPosition] = useState('Pemilik');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
+  const [token, setToken] = useState('');
   const [saving, setSaving] = useState(false);
 
   async function submit() {
@@ -31,6 +32,7 @@ function SetupForm({ onDone }: { onDone: (u: User) => void }) {
         username,
         position,
         password,
+        token,
       });
       toast(`Akaun admin dicipta. Kod QR log masuk: ${res.qr_code} (boleh dilihat semula di menu Pengguna)`, 'success');
       onDone(res.user);
@@ -57,6 +59,9 @@ function SetupForm({ onDone }: { onDone: (u: User) => void }) {
       </Field>
       <Field label="Sahkan Kata Laluan">
         <input className={inputCls} type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} />
+      </Field>
+      <Field label="Token Persediaan (jika ditetapkan)">
+        <input className={inputCls} value={token} onChange={(e) => setToken(e.target.value)} autoCapitalize="none" />
       </Field>
       <Button full onClick={submit} disabled={saving || !fullName || !username || !password}>
         {saving ? <Spinner small /> : <><LogIn size={17} /> Cipta Akaun Admin</>}

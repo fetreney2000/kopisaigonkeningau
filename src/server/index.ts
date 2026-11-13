@@ -5,11 +5,12 @@ import type {
 } from '../shared/types';
 import {
   SESSION_COOKIE, createSession, deleteSession, deleteUserSessions, dummyDerive, getSessionUser,
-  hashPassword, readCookie, sameOrigin, sessionCookie, sha256Hex, tempPassword, verifyPassword,
+  hashPassword, passwordHashIterations, PBKDF2_ITERATIONS, readCookie, sameOrigin, sessionCookie,
+  sha256Hex, tempPassword, verifyPassword,
   type AuthUser,
 } from './auth';
 
-type Env = { DB: D1Database; ASSETS: Fetcher; PASSWORD_PEPPER?: string };
+type Env = { DB: D1Database; ASSETS: Fetcher; PASSWORD_PEPPER?: string; SETUP_TOKEN?: string };
 type Vars = { user: AuthUser | null };
 
 const app = new Hono<{ Bindings: Env; Variables: Vars }>();
@@ -137,6 +138,21 @@ api.use('*', async (c, next) => {
   await next();
 });
 
+// -- Pengepala keselamatan + polisi cache ---------------------------------------
+// Diterapkan pada semua tindak balas API. Untuk halaman HTML statik (dihidang
+// langsung dari ASSETS), lihat fail public/_headers.
+api.use('*', async (c, next) => {
+  await next();
+  c.header('X-Content-Type-Options', 'nosniff');
+  c.header('X-Frame-Options', 'DENY');
+  c.header('Referrer-Policy', 'no-referrer');
+  c.header(
+    'Content-Security-Policy',
+    "default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; font-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+  );
+  if (c.req.path.startsWith('/api/')) c.header('Cache-Control', 'no-store');
+});
+
 // -- Penjaga akses ---------------------------------------------------------------
 const requireAuth: MiddlewareHandler = async (c, next) => {
   if (!c.get('user')) return jsonError('Perlu log masuk', 401);
@@ -210,7 +226,7 @@ async function createUser(c: Context<{ Bindings: Env; Variables: Vars }>, role: 
   if (exists) return jsonError('Nama pengguna sudah digunakan');
 
   const id = genId('USR');
-  const qrCode = genId('USR'); // kod QR log masuk kekal
+  const qrCode = genId('USR', 12); // 60 bit entropi - kod QR log masuk kekal (bearer)
   const hash = await hashPassword(password, pepperOf(c.env));
   const r = await c.env.DB.prepare(
     `INSERT INTO users (id, full_name, username, position, role, password_hash, qr_token_hash, created_at, archived)
@@ -224,15 +240,25 @@ async function createUser(c: Context<{ Bindings: Env; Variables: Vars }>, role: 
 }
 
 api.get('/auth/me', async (c) => {
-  const n = await c.env.DB.prepare('SELECT COUNT(*) AS n FROM users').first<{ n: number }>();
+  const n = await c.env.DB.prepare('SELECT COUNT(*) AS n FROM users WHERE archived = 0').first<{ n: number }>();
   const user = c.get('user');
   return c.json<AuthMe>({ user, needs_setup: (n?.n ?? 0) === 0 });
 });
 
 api.post('/auth/setup', async (c) => {
   if (!sameOrigin(c.req.raw)) return jsonError('Asal permintaan tidak sah', 403);
-  const n = await c.env.DB.prepare('SELECT COUNT(*) AS n FROM users').first<{ n: number }>();
+  const n = await c.env.DB.prepare('SELECT COUNT(*) AS n FROM users WHERE archived = 0').first<{ n: number }>();
   if ((n?.n ?? 0) > 0) return jsonError('Akaun sudah wujud. Sila log masuk', 403);
+  // Jika SETUP_TOKEN ditetapkan sebagai secret, persediaan mesti membawanya.
+  // Ini menghalang orang asing yang terjumpa URL daripada merampas akaun admin
+  // pertama sebelum pemilik sempat membuat persediaan.
+  const expected = c.env.SETUP_TOKEN;
+  if (expected) {
+    const b = await c.req.json().catch(() => null) as Record<string, unknown> | null;
+    const provided = str(b?.token);
+    const [given, wanted] = await Promise.all([sha256Hex(provided), sha256Hex(expected)]);
+    if (given !== wanted) return jsonError('Token persediaan tidak sah', 403);
+  }
   return createUser(c, 'admin');
 });
 
@@ -258,6 +284,12 @@ api.post('/auth/login', async (c) => {
     return jsonError('Nama pengguna atau kata laluan salah', 401);
   }
 
+  // Naik taraf hash kepada bilangan lelaran semasa jika masih menggunakan tetapan lama
+  if (passwordHashIterations(row.password_hash) !== PBKDF2_ITERATIONS) {
+    const newHash = await hashPassword(password, pepperOf(c.env));
+    await c.env.DB.prepare('UPDATE users SET password_hash = ?2 WHERE id = ?1').bind(row.id, newHash).run();
+  }
+
   loginFails.delete(key);
   const token = await createSession(c.env.DB, row.id);
   c.header('Set-Cookie', sessionCookie(token, new URL(c.req.url).protocol === 'https:'));
@@ -268,12 +300,20 @@ api.post('/auth/qr-login', async (c) => {
   if (!sameOrigin(c.req.raw)) return jsonError('Asal permintaan tidak sah', 403);
   const b = await c.req.json().catch(() => null) as Record<string, unknown> | null;
   const code = str(b?.code).toUpperCase();
-  if (!/^USR-[A-Z2-9]{8}$/.test(code)) return jsonError('Kod QR log masuk tidak sah', 401);
+  // 8 aksara = format lama (kod sedia ada kekal sah), 12 aksara = format baharu
+  if (!/^USR-[A-Z2-9]{8}([A-Z2-9]{4})?$/.test(code)) return jsonError('Kod QR log masuk tidak sah', 401);
+
+  const key = `qr|${clientIp(c)}`;
+  if (!loginAllowed(key)) return jsonError('Terlalu banyak percubaan. Cuba lagi dalam 1 minit.', 429);
 
   const row = await c.env.DB.prepare('SELECT id, full_name, username, position, role FROM users WHERE qr_token_hash = ?1 AND archived = 0')
     .bind(await sha256Hex(code)).first<AuthUser>();
-  if (!row) return jsonError('Kod QR tidak sah atau sudah tidak aktif', 401);
+  if (!row) {
+    recordLoginFail(key);
+    return jsonError('Kod QR tidak sah atau sudah tidak aktif', 401);
+  }
 
+  loginFails.delete(key);
   const token = await createSession(c.env.DB, row.id);
   c.header('Set-Cookie', sessionCookie(token, new URL(c.req.url).protocol === 'https:'));
   return c.json({ user: row });
@@ -444,7 +484,7 @@ api.get('/summary', adminOnly, async (c) => {
        WHERE substr(p.date, 1, 7) = ?1 GROUP BY i.source`
     ).bind(ym).all<{ source: string; total: number }>(),
     db.prepare(
-      `SELECT i.source AS source, SUM(u.qty * i.unit_cost) AS total
+      `SELECT i.source AS source, SUM(u.qty * u.unit_cost) AS total
        FROM usages u JOIN items i ON i.id = u.item_id
        WHERE u.date >= ?1 GROUP BY i.source`
     ).bind(new Date(now.getTime() - 30 * 86400_000).toISOString().slice(0, 10)).all<{ source: string; total: number }>(),
@@ -683,14 +723,25 @@ api.post('/usages', requireAuth, async (c) => {
   if (qty <= 0) return jsonError('Kuantiti mesti melebihi sifar');
   const method = str(b.method) === 'scan' ? 'scan' : 'manual';
 
-  const item = await c.env.DB.prepare('SELECT id, unit FROM items WHERE id = ?1 AND archived = 0').bind(item_id).first<{ id: string; unit: string }>();
+  const item = await c.env.DB.prepare('SELECT id, unit, unit_cost FROM items WHERE id = ?1 AND archived = 0').bind(item_id).first<{ id: string; unit: string; unit_cost: number }>();
   if (!item) return jsonError('Item tidak dijumpai', 404);
+
+  // Stok tidak dibenarkan negatif: penggunaan mesti berpandukan baki semasa
+  const srow = await c.env.DB.prepare(
+    `SELECT COALESCE((SELECT SUM(qty) FROM purchases WHERE item_id = ?1), 0)
+          - COALESCE((SELECT SUM(qty) FROM usages WHERE item_id = ?1), 0)
+          + COALESCE((SELECT SUM(delta) FROM adjustments WHERE item_id = ?1), 0) AS stock`
+  ).bind(item_id).first<{ stock: number }>();
+  const stock = num(srow?.stock);
+  if (qty > stock) {
+    return jsonError(`Stok tidak mencukupi: baki ${stock} ${item.unit}. Laraskan stok dahulu jika kiraan fizikal berbeza`);
+  }
 
   const id = genId('US');
   await c.env.DB.prepare(
-    `INSERT INTO usages (id, item_id, qty, date, method, note, created_at, recorded_by)
-     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)`
-  ).bind(id, item_id, qty, str(b.date) || today(), method, str(b.note), new Date().toISOString(), user.id).run();
+    `INSERT INTO usages (id, item_id, qty, unit_cost, date, method, note, created_at, recorded_by)
+     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)`
+  ).bind(id, item_id, qty, item.unit_cost, str(b.date) || today(), method, str(b.note), new Date().toISOString(), user.id).run();
   return c.json({ id }, 201);
 });
 
@@ -709,8 +760,19 @@ api.post('/adjustments', adminOnly, async (c) => {
   if (!item_id) return jsonError('Item diperlukan');
   if (delta === 0) return jsonError('Nilai pelarasan tidak boleh sifar');
 
-  const item = await c.env.DB.prepare('SELECT id FROM items WHERE id = ?1 AND archived = 0').bind(item_id).first();
+  const item = await c.env.DB.prepare('SELECT id, unit FROM items WHERE id = ?1 AND archived = 0').bind(item_id).first<{ id: string; unit: string }>();
   if (!item) return jsonError('Item tidak dijumpai', 404);
+
+  // Pelarasan juga tidak boleh menjadikan stok negatif
+  const srow = await c.env.DB.prepare(
+    `SELECT COALESCE((SELECT SUM(qty) FROM purchases WHERE item_id = ?1), 0)
+          - COALESCE((SELECT SUM(qty) FROM usages WHERE item_id = ?1), 0)
+          + COALESCE((SELECT SUM(delta) FROM adjustments WHERE item_id = ?1), 0) AS stock`
+  ).bind(item_id).first<{ stock: number }>();
+  const stock = num(srow?.stock);
+  if (stock + delta < 0) {
+    return jsonError(`Pelarasan akan menjadikan stok negatif (baki ${stock} ${item.unit})`);
+  }
 
   const id = genId('AD');
   await c.env.DB.prepare(
@@ -741,12 +803,12 @@ api.get('/reports', adminOnly, async (c) => {
        WHERE substr(p.date, 1, 7) >= ?1 GROUP BY ym, i.source`
     ).bind(startYm).all<{ ym: string; source: string; total: number }>(),
     c.env.DB.prepare(
-      `SELECT substr(u.date, 1, 7) AS ym, i.source AS source, SUM(u.qty * i.unit_cost) AS total
+      `SELECT substr(u.date, 1, 7) AS ym, i.source AS source, SUM(u.qty * u.unit_cost) AS total
        FROM usages u JOIN items i ON i.id = u.item_id
        WHERE substr(u.date, 1, 7) >= ?1 GROUP BY ym, i.source`
     ).bind(startYm).all<{ ym: string; source: string; total: number }>(),
     c.env.DB.prepare(
-      `SELECT u.item_id, i.name, i.unit, i.source, SUM(u.qty) AS qty, SUM(u.qty * i.unit_cost) AS cost
+      `SELECT u.item_id, i.name, i.unit, i.source, SUM(u.qty) AS qty, SUM(u.qty * u.unit_cost) AS cost
        FROM usages u JOIN items i ON i.id = u.item_id
        WHERE u.date >= ?1 GROUP BY u.item_id ORDER BY cost DESC LIMIT 6`
     ).bind(since30).all<{ item_id: string; name: string; unit: string; source: string; qty: number; cost: number }>(),
@@ -754,7 +816,7 @@ api.get('/reports', adminOnly, async (c) => {
     stockByItem(c.env.DB),
     usage30ByItem(c.env.DB),
     c.env.DB.prepare(
-      `SELECT u2.full_name AS user_name, COUNT(*) AS count, SUM(u.qty) AS qty, SUM(u.qty * i.unit_cost) AS cost
+      `SELECT u2.full_name AS user_name, COUNT(*) AS count, SUM(u.qty) AS qty, SUM(u.qty * u.unit_cost) AS cost
        FROM usages u JOIN items i ON i.id = u.item_id LEFT JOIN users u2 ON u2.id = u.recorded_by
        WHERE u.date >= ?1 GROUP BY u.recorded_by ORDER BY cost DESC`
     ).bind(since30).all<{ user_name: string | null; count: number; qty: number; cost: number }>(),
@@ -769,7 +831,7 @@ api.get('/reports', adminOnly, async (c) => {
        WHERE substr(p.date, 1, 7) >= ?1 GROUP BY category ORDER BY total DESC`
     ).bind(startYm).all<{ category: string; total: number }>(),
     c.env.DB.prepare(
-      `SELECT COALESCE(NULLIF(i.category, ''), 'Lain-lain') AS category, SUM(u.qty * i.unit_cost) AS total
+      `SELECT COALESCE(NULLIF(i.category, ''), 'Lain-lain') AS category, SUM(u.qty * u.unit_cost) AS total
        FROM usages u JOIN items i ON i.id = u.item_id
        WHERE substr(u.date, 1, 7) >= ?1 GROUP BY category ORDER BY total DESC`
     ).bind(startYm).all<{ category: string; total: number }>(),

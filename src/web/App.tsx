@@ -245,22 +245,22 @@ export default function App() {
 
   let page: ReactNode;
   if (base === '/label') {
-    page = <LabelSheet />;
+    page = admin ? <LabelSheet /> : <Denied />;
   } else if (labelMatch) {
-    page = <Labels itemId={decodeURIComponent(labelMatch[1])} />;
+    page = admin ? <Labels itemId={decodeURIComponent(labelMatch[1])} /> : <Denied />;
   } else {
     switch (base) {
       case '/inventori':
-        page = <Inventory />;
+        page = admin ? <Inventory /> : <Denied />;
         break;
       case '/imbas':
         page = <ScanPage />;
         break;
       case '/pembelian':
-        page = <Purchases />;
+        page = admin ? <Purchases /> : <Denied />;
         break;
       case '/laporan':
-        page = <Reports />;
+        page = admin ? <Reports /> : <Denied />;
         break;
       case '/pengguna':
         page = admin ? <UsersPage /> : <Denied />;

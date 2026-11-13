@@ -81,8 +81,16 @@ Imbasan kamera berfungsi di `localhost` kerana dianggap konteks selamat.
 
 - Kata laluan disimpan sebagai **PBKDF2-HMAC-SHA256 (100,000 lelaran)** dengan salt rawak +
   *pepper* rahsia (ikut OWASP Password Storage Cheat Sheet) — pepper tidak pernah disimpan dalam D1.
+  OWASP mengesyorkan kira-kira 600,000 lelaran; had CPU 10 ms pelan Workers percuma ialah sebab
+  nilai ini lebih rendah. Format hash menyimpan bilangan lelaran, jadi menaikkan pemalar
+  `PBKDF2_ITERATIONS` dalam `src/server/auth.ts` akan menaik taraf hash setiap pengguna secara
+  automatik pada log masuk seterusnya.
 - Sesi: kuki `HttpOnly; SameSite=Lax` 30 hari; D1 menyimpan **hash SHA-256 token sahaja**.
-- Had kadar log masuk: 5 kegagalan → kunci 60 saat.
+- Had kadar log masuk: 5 kegagalan → kunci 60 saat (kata laluan dan kod QR).
+- Kod QR log masuk: 12 aksara rawak (kira-kira 60 bit) untuk akaun baharu; kod format lama
+  (8 aksara) kekal sah sehingga ditukar. Kod QR ialah kunci log masuk kekal — layan seperti kata laluan.
+- Pengepala keselamatan: CSP, `nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer`,
+  dan `Cache-Control: no-store` untuk semua respons `/api/*`.
 - Tukar kata laluan / lumpuhkan akaun melumpuhkan semua sesi pengguna tersebut.
 
 ### Tetapkan pepper pada produksi (wajib, sekali sahaja)
@@ -92,6 +100,19 @@ npx wrangler secret put PASSWORD_PEPPER
 ```
 
 Jika pepper hilang, semua kata laluan mesti ditetapkan semula (kod QR log masuk tidak terjejas).
+
+### Token persediaan pertama (disyorkan)
+
+Sebelum akaun admin pertama dicipta, sesiapa yang menemui URL aplikasi boleh menuntut
+persediaan tersebut. Tetapkan token sekali guna supaya hanya anda boleh melengkapkannya:
+
+```bash
+npx wrangler secret put SETUP_TOKEN
+```
+
+Selepas itu, skrin *Persediaan Pertama* memerlukan token yang sama dalam medan
+**Token Persediaan**. Jika `SETUP_TOKEN` tidak ditetapkan, persediaan dibuka seperti biasa.
+Selepas akaun admin wujud, persediaan ditutup secara automatik.
 
 ## Deploy ke Cloudflare (percuma)
 

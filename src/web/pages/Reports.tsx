@@ -150,8 +150,8 @@ export default function ReportsPage() {
         <SectionTitle>Kos Penggunaan Bulanan</SectionTitle>
         <SpendChart months={data.months} mode="usage" />
         <p className="mt-3 border-t border-cream-200 pt-3 text-xs leading-relaxed text-bark-700/60">
-          Kos penggunaan dikira daripada kuantiti stok keluar × kos seunit semasa. Ini memberi gambaran
-          berapa nilai bahan yang benar-benar digunakan berbanding apa yang dibeli.
+          Kos penggunaan dikira daripada kuantiti stok keluar × kos seunit pada tarikh rekod itu.
+          Nilai sejarah kekal walaupun harga semasa item berubah kemudian.
         </p>
       </Card>
 

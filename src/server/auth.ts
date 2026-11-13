@@ -6,7 +6,12 @@ import type { D1Database } from '@cloudflare/workers-types';
 
 export const SESSION_COOKIE = 'sg_session';
 export const SESSION_MAX_AGE = 30 * 86400; // 30 hari (saat)
-const PBKDF2_ITERATIONS = 100_000; // pilihan tertinggi yang muat had CPU Workers percuma
+// OWASP mengesyorkan kira-kira 600,000 lelaran untuk PBKDF2-HMAC-SHA256, tetapi had
+// CPU 10 ms pelan Workers percuma membataskan nilai yang praktikal di sini. Format
+// hash tersimpan membawa bilangan lelaran sendiri, jadi bila pelan berubah (atau had
+// CPU dilonggarkan), naikkan pemalar ini sahaja: hash lama disemak dengan lelaran
+// lama, kemudian dinaik taraf secara automatik semasa log masuk seterusnya.
+export const PBKDF2_ITERATIONS = 100_000;
 
 const enc = new TextEncoder();
 
@@ -73,6 +78,14 @@ export async function verifyPassword(stored: string, password: string, pepper: s
   } catch {
     return false;
   }
+}
+
+/** Bilangan lelaran daripada hash tersimpan (null jika format tidak dikenali) */
+export function passwordHashIterations(stored: string): number | null {
+  const parts = stored.split('$');
+  if (parts.length !== 4 || parts[0] !== 'pbkdf2_sha256') return null;
+  const n = parseInt(parts[1]!, 10);
+  return Number.isFinite(n) ? n : null;
 }
 
 /** Untuk username tidak dikenali - jalankan derivasi sama supaya masa tindak balas seragam */
