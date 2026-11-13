@@ -61,7 +61,7 @@ Imbasan kamera berfungsi di `localhost` kerana dianggap konteks selamat.
 3. **Buat jadual + (pilihan) data contoh** pada pangkalan data sebenar:
    ```bash
    npm run db:migrate:remote
-   npm run db:seed:remote       # pilihan
+   npm run db:seed:remote       # pilihan — data contoh (seed/sample.sql)
    ```
 4. **Deploy**:
    ```bash
@@ -69,6 +69,20 @@ Imbasan kamera berfungsi di `localhost` kerana dianggap konteks selamat.
    ```
    Aplikasi akan hidup di `https://saigon-inventory.<subdomain-anda>.workers.dev` — HTTPS automatik,
    jadi pengimbasan kamera berfungsi terus di telefon.
+
+### Deploy automatik dari GitHub (pilihan)
+
+Repositori ini disertakan `.github/workflows/deploy.yml` — setiap tekanan (push) ke `main`
+akan membina dan deploy automatik ke Cloudflare. Setup sekali sahaja:
+
+1. Dapatkan **Account ID** anda di Cloudflare Dashboard (halaman utama akaun, panel kanan).
+2. Cipta **API Token**: Cloudflare Dashboard → My Profile → API Tokens → *Create Token* →
+   gunakan templat **"Edit Cloudflare Workers"**, kemudian tambah kebenaran **D1 → Edit**
+   (perlu untuk migrasi pangkalan data).
+3. Dalam GitHub: **Settings → Secrets and variables → Actions → New repository secret**, tambah:
+   - `CLOUDFLARE_API_TOKEN` — token dari langkah 2
+   - `CLOUDFLARE_ACCOUNT_ID` — Account ID dari langkah 1
+4. Selesai — setiap `git push` ke `main` akan deploy sendiri.
 
 ## Struktur Projek
 
@@ -78,7 +92,8 @@ src/
   shared/types.ts     # jenis data dikongsi pelayan ↔ klien
   web/                # aplikasi React
     pages/            # Dashboard, Inventory, ScanPage, Purchases, Reports, Labels
-  migrations/         # skema SQL D1 (0001) + data contoh (0002)
+  migrations/         # skema SQL D1 (berjejak — dijalankan oleh wrangler d1 migrations apply)
+  seed/sample.sql     # data contoh (pilihan, jangan guna pada produksi)
 wrangler.jsonc        # konfigurasi Workers + D1
 ```
 
