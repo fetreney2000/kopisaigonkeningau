@@ -114,6 +114,42 @@ export function tempPassword(): string {
   return `Kopi-${randCode('X', 6).slice(2)}`;
 }
 
+// ------------------------------------------------------------------ simpanan kod QR
+
+/** Kunci AES-GCM diterbitkan daripada pepper (SHA-256, domain berasingan) */
+async function qrAesKey(pepper: string): Promise<CryptoKey> {
+  const digest = await crypto.subtle.digest('SHA-256', bytes(`qr-store|${pepper}`));
+  return crypto.subtle.importKey('raw', digest, 'AES-GCM', false, ['encrypt', 'decrypt']);
+}
+
+/**
+ * Sulitkan kod QR log masuk untuk simpanan: base64url(iv || ciphertext).
+ * Kod QR ialah kredensial log masuk penuh, jadi ia tidak disimpan sebagai teks biasa:
+ * salinan pangkalan data sahaja tidak cukup untuk log masuk sebagai pengguna lain.
+ */
+export async function encryptQrCode(code: string, pepper: string): Promise<string> {
+  const key = await qrAesKey(pepper);
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const ct = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, bytes(code)));
+  const out = new Uint8Array(iv.length + ct.length);
+  out.set(iv);
+  out.set(ct, iv.length);
+  return b64u(out);
+}
+
+/** Buka semula kod QR tersulit; null jika pepper berbeza atau data rosak */
+export async function decryptQrCode(enc: string, pepper: string): Promise<string | null> {
+  try {
+    const raw = b64uDecode(enc);
+    if (raw.length <= 12) return null;
+    const key = await qrAesKey(pepper);
+    const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: raw.slice(0, 12) }, key, raw.slice(12));
+    return new TextDecoder().decode(plain);
+  } catch {
+    return null;
+  }
+}
+
 // ------------------------------------------------------------------ sesi
 
 export interface AuthUser {

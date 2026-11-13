@@ -70,9 +70,11 @@ Imbasan kamera berfungsi di `localhost` kerana dianggap konteks selamat.
    - **Staff** — dashboard sendiri + imbas stok keluar sahaja. Kos, harga dan perbelanjaan
      **tidak dipaparkan langsung** kepada staff (disingkirkan di pelayan juga, bukan hanya disembunyikan).
 3. **Kod QR log masuk**: setiap pengguna mendapat kod QR peribadi (`USR-XXXXXXXX`) yang boleh
-   dicetak (`Pengguna` → *Kod QR* → *Cetak QR*). Kod ini **kunci log masuk kekal** — sesiapa yang
-   memegangnya boleh log masuk sebagai pengguna tersebut, jadi simpan dengan selamat.
+   dilihat dan dicetak bila-bila masa (`Pengguna` → *Kod QR* → *Cetak QR*, atau *Akaun Saya* →
+   *Lihat Kod QR*). Kod ini **kunci log masuk kekal** — sesiapa yang memegangnya boleh log masuk
+   sebagai pengguna tersebut, jadi simpan dengan selamat.
    Jika kad hilang: *Tukar Kod QR* menjana kod baharu — kod lama terus tidak sah.
+   Kod QR disimpan **tersulit** (AES-GCM dengan kunci daripada `PASSWORD_PEPPER`), bukan teks biasa.
 4. **Admin boleh**: sunting nama pengguna/jawatan/peranan, tetapkan semula kata laluan
    (jana kata laluan sementara `Kopi-XXXXXX`, dipaparkan sekali sahaja), dan lumpuhkan akaun.
    Sistem sentiasa mengekalkan sekurang-kurangnya satu admin aktif.
@@ -89,6 +91,8 @@ Imbasan kamera berfungsi di `localhost` kerana dianggap konteks selamat.
 - Had kadar log masuk: 5 kegagalan → kunci 60 saat (kata laluan dan kod QR).
 - Kod QR log masuk: 12 aksara rawak (kira-kira 60 bit) untuk akaun baharu; kod format lama
   (8 aksara) kekal sah sehingga ditukar. Kod QR ialah kunci log masuk kekal — layan seperti kata laluan.
+  D1 menyimpan cincang SHA-256 (untuk log masuk) dan salinan tersulit AES-GCM (untuk dipaparkan
+  semula oleh admin); kunci penyulitan diterbitkan daripada `PASSWORD_PEPPER`.
 - Pengepala keselamatan: CSP, `nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer`,
   dan `Cache-Control: no-store` untuk semua respons `/api/*`.
 - Tukar kata laluan / lumpuhkan akaun melumpuhkan semua sesi pengguna tersebut.
@@ -99,7 +103,8 @@ Imbasan kamera berfungsi di `localhost` kerana dianggap konteks selamat.
 npx wrangler secret put PASSWORD_PEPPER
 ```
 
-Jika pepper hilang, semua kata laluan mesti ditetapkan semula (kod QR log masuk tidak terjejas).
+Jika pepper hilang, semua kata laluan mesti ditetapkan semula. Log masuk QR masih berfungsi, tetapi
+kad QR tidak lagi dapat dipaparkan sehingga kod ditukar (tukar kod akan menyulitkannya dengan pepper baharu).
 
 ### Token persediaan pertama (disyorkan)
 

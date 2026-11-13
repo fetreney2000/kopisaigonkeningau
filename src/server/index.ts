@@ -6,7 +6,7 @@ import type {
 import {
   SESSION_COOKIE, createSession, deleteSession, deleteUserSessions, dummyDerive, getSessionUser,
   hashPassword, passwordHashIterations, PBKDF2_ITERATIONS, readCookie, sameOrigin, sessionCookie,
-  sha256Hex, tempPassword, verifyPassword,
+  sha256Hex, tempPassword, verifyPassword, decryptQrCode, encryptQrCode,
   type AuthUser,
 } from './auth';
 
@@ -184,6 +184,8 @@ function staffAllowed(path: string, method: string): boolean {
   if (method === 'POST' && path === '/api/usages') return true;
   // Tukar kod QR sendiri; pengendali menyemak pemilik
   if (method === 'POST' && /^\/api\/users\/[^/]+\/rotate-qr$/.test(path)) return true;
+  // Lihat kod QR sendiri; pengendali menyemak pemilik
+  if (method === 'GET' && /^\/api\/users\/[^/]+\/qr$/.test(path)) return true;
   return false;
 }
 
@@ -243,11 +245,12 @@ async function createUser(c: Context<{ Bindings: Env; Variables: Vars }>, role: 
 
   const id = genId('USR');
   const qrCode = genId('USR', 12); // 60 bit entropi - kod QR log masuk kekal (bearer)
-  const hash = await hashPassword(password, pepperOf(c.env));
+  const pepper = pepperOf(c.env);
+  const hash = await hashPassword(password, pepper);
   const r = await c.env.DB.prepare(
-    `INSERT INTO users (id, full_name, username, position, role, password_hash, qr_token_hash, created_at, archived)
-     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, 0)`
-  ).bind(id, full_name, username, position, role, hash, await sha256Hex(qrCode), new Date().toISOString()).run();
+    `INSERT INTO users (id, full_name, username, position, role, password_hash, qr_token_hash, qr_code_enc, created_at, archived)
+     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, 0)`
+  ).bind(id, full_name, username, position, role, hash, await sha256Hex(qrCode), await encryptQrCode(qrCode, pepper), new Date().toISOString()).run();
   if (!r.success) return jsonError('Gagal mencipta pengguna', 500);
   return c.json({
     user: { id, full_name, username, position, role } satisfies AuthUser,
@@ -456,9 +459,25 @@ api.post('/users/:id/rotate-qr', requireAuth, async (c) => {
   const target = await c.env.DB.prepare('SELECT id FROM users WHERE id = ?1 AND archived = 0').bind(id).first();
   if (!target) return jsonError('Pengguna tidak dijumpai', 404);
   const qrCode = genId('USR', 12); // 60 bit entropi, sama seperti penciptaan pengguna
-  const r = await c.env.DB.prepare('UPDATE users SET qr_token_hash = ?2 WHERE id = ?1').bind(id, await sha256Hex(qrCode)).run();
+  const pepper = pepperOf(c.env);
+  const r = await c.env.DB.prepare('UPDATE users SET qr_token_hash = ?2, qr_code_enc = ?3 WHERE id = ?1')
+    .bind(id, await sha256Hex(qrCode), await encryptQrCode(qrCode, pepper)).run();
   if (!r.success) return jsonError('Gagal menukar kod QR', 500);
   return c.json({ qr_code: qrCode }); // kod lama lupus - cetak yang baharu
+});
+
+api.get('/users/:id/qr', requireAuth, async (c) => {
+  const me = c.get('user')!;
+  const id = c.req.param('id');
+  // Setiap pengguna boleh lihat kod sendiri; admin boleh lihat kod sesiapa
+  if (id !== me.id && me.role !== 'admin') return jsonError('Tiada kebenaran (admin sahaja)', 403);
+  const row = await c.env.DB.prepare('SELECT qr_code_enc FROM users WHERE id = ?1 AND archived = 0')
+    .bind(id).first<{ qr_code_enc: string | null }>();
+  if (!row) return jsonError('Pengguna tidak dijumpai', 404);
+  if (!row.qr_code_enc) return jsonError('Kod QR ini dicipta sebelum ciri simpanan; tukar kod untuk melihatnya', 409);
+  const code = await decryptQrCode(row.qr_code_enc, pepperOf(c.env));
+  if (!code) return jsonError('Kod QR tidak dapat dibuka; tukar kod untuk menjana yang baharu', 409);
+  return c.json({ qr_code: code });
 });
 
 api.post('/users/:id/restore', adminOnly, async (c) => {

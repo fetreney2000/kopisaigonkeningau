@@ -1,5 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+/** Ralat API dengan kod status HTTP (contoh: 409 = kod QR lama tidak disimpan) */
+export class ApiError extends Error {
+  status: number;
+  constructor(message: string, status: number) {
+    super(message);
+    this.status = status;
+  }
+}
+
 async function request<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, {
     ...init,
@@ -15,7 +24,7 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
     // Sesi tidak sah / dibatalkan: beritahu App supaya kembali ke skrin log masuk
     if (res.status === 401) window.dispatchEvent(new Event('sg:unauthorized'));
     const msg = (body as { error?: string } | null)?.error ?? `Ralat ${res.status}`;
-    throw new Error(msg);
+    throw new ApiError(msg, res.status);
   }
   return body as T;
 }

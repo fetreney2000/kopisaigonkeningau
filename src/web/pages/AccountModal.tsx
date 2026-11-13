@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { KeyRound, LogOut, QrCode, ShieldCheck } from 'lucide-react';
-import { api } from '../api';
+import { api, ApiError } from '../api';
 import { useAuth, isAdmin } from '../auth';
 import { Badge, Button, Field, inputCls, Modal, Spinner, toast } from '../ui';
 import { QrLoginModal, type UserQrData } from './UserQr';
@@ -16,12 +16,13 @@ export default function AccountModal({ open, onClose }: { open: boolean; onClose
   const [qrConfirm, setQrConfirm] = useState(false);
   const [qrData, setQrData] = useState<UserQrData | null>(null);
   const [rotating, setRotating] = useState(false);
+  const [loadingQr, setLoadingQr] = useState(false);
 
   // Reset borang bila modal ditutup/dibuka
   useEffect(() => {
     if (!open) {
       setCurrent(''); setNext(''); setConfirm(''); setSaving(false); setShowForm(false);
-      setQrConfirm(false); setQrData(null); setRotating(false);
+      setQrConfirm(false); setQrData(null); setRotating(false); setLoadingQr(false);
     }
   }, [open]);
 
@@ -70,6 +71,25 @@ export default function AccountModal({ open, onClose }: { open: boolean; onClose
     }
   }
 
+  /** Lihat kod QR sedia ada; kod lama perlu ditukar sekali */
+  async function viewMyQr() {
+    if (!user) return;
+    setLoadingQr(true);
+    try {
+      const res = await api.get<{ qr_code: string }>(`/api/users/${user.id}/qr`);
+      setQrData({ name: user.full_name, username: user.username, position: user.position, code: res.qr_code });
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 409) {
+        toast(e.message, 'error');
+        setQrConfirm(true);
+      } else {
+        toast(e instanceof Error ? e.message : 'Ralat', 'error');
+      }
+    } finally {
+      setLoadingQr(false);
+    }
+  }
+
   if (!user) return null;
 
   return (
@@ -92,11 +112,10 @@ export default function AccountModal({ open, onClose }: { open: boolean; onClose
         <div className="rounded-xl border border-cream-300 px-4 py-3.5">
           <div className="text-sm font-bold text-bark-900">Kad QR Log Masuk</div>
           <p className="mt-1 text-xs leading-relaxed text-bark-700/60">
-            Sistem tidak menyimpan imej kad, jadi ia hanya dipaparkan semasa dijana. Jika kad hilang, jana yang baharu di
-            sini - kod lama terus tidak sah.
+            Lihat dan cetak kad QR anda bila-bila masa. Jika kad hilang, tukar ke kod baharu - kad lama terus tidak sah.
           </p>
-          <Button variant="secondary" full className="mt-3" onClick={() => setQrConfirm(true)}>
-            <QrCode size={17} /> Jana Kod QR Baharu
+          <Button variant="secondary" full className="mt-3" onClick={viewMyQr} disabled={loadingQr}>
+            {loadingQr ? <Spinner small /> : <><QrCode size={17} /> Lihat Kod QR</>}
           </Button>
         </div>
 
@@ -150,7 +169,11 @@ export default function AccountModal({ open, onClose }: { open: boolean; onClose
         </div>
       </Modal>
 
-      <QrLoginModal data={qrData} onClose={() => setQrData(null)} />
+      <QrLoginModal
+        data={qrData}
+        onClose={() => setQrData(null)}
+        onRotate={() => { setQrData(null); setQrConfirm(true); }}
+      />
     </Modal>
   );
 }

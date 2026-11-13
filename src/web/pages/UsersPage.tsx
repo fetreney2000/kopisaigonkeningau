@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { KeyRound, Eye, EyeOff, Plus, QrCode, ShieldCheck, UserRound, UserRoundCheck, UserRoundPen, UserRoundX } from 'lucide-react';
-import { api, useApi } from '../api';
+import { api, useApi, ApiError } from '../api';
 import { tarikh } from '../format';
 import { Badge, Button, Card, EmptyState, Field, inputCls, Modal, Spinner, toast } from '../ui';
 import { QrLoginModal } from './UserQr';
@@ -171,6 +171,7 @@ export default function UsersPage() {
   const [newPassword, setNewPassword] = useState<string | null>(null);
   const [disableUser, setDisableUser] = useState<User | null>(null);
   const [rotateUser, setRotateUser] = useState<User | null>(null);
+  const [qrOwner, setQrOwner] = useState<User | null>(null);
 
   const users = data?.users ?? [];
   const active = users.filter((u) => !u.archived);
@@ -189,9 +190,26 @@ export default function UsersPage() {
   async function rotateQr(u: User) {
     try {
       const res = await api.post<{ qr_code: string }>(`/api/users/${u.id}/rotate-qr`, {});
+      setQrOwner(u);
       setQrModal({ name: u.full_name, username: u.username, position: u.position, code: res.qr_code });
     } catch (e) {
       toast(e instanceof Error ? e.message : 'Ralat', 'error');
+    }
+  }
+
+  /** Buka kod QR sedia ada; kod lama (sebelum ciri simpanan) perlu ditukar sekali */
+  async function viewQr(u: User) {
+    try {
+      const res = await api.get<{ qr_code: string }>(`/api/users/${u.id}/qr`);
+      setQrOwner(u);
+      setQrModal({ name: u.full_name, username: u.username, position: u.position, code: res.qr_code });
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 409) {
+        toast(e.message, 'error');
+        setRotateUser(u);
+      } else {
+        toast(e instanceof Error ? e.message : 'Ralat', 'error');
+      }
     }
   }
 
@@ -242,7 +260,7 @@ export default function UsersPage() {
                 <span className="flex flex-wrap items-center gap-2">
                   <span className="truncate text-[15px] font-bold text-bark-900">{u.full_name}</span>
                   <Badge className={ROLE_CLS[u.role]}>{ROLE_LABEL[u.role]}</Badge>
-                  {u.archived && <Badge className="bg-berry-soft text-berry-600">Dilumpuhkan</Badge>}
+                  {!!u.archived && <Badge className="bg-berry-soft text-berry-600">Dilumpuhkan</Badge>}
                 </span>
                 <span className="block truncate text-xs text-bark-700/60">
                   @{u.username}{u.position ? ` · ${u.position}` : ''} · dicipta {tarikh(u.created_at)}
@@ -256,8 +274,8 @@ export default function UsersPage() {
                 </span>
               ) : (
                 <span className="flex shrink-0 flex-wrap gap-1.5">
-                  <button onClick={() => setRotateUser(u)} className="flex h-9 items-center gap-1.5 rounded-lg border border-cream-300 bg-white px-2.5 text-xs font-semibold text-bark-700 hover:bg-cream-100" title="Jana kod QR log masuk baharu">
-                    <QrCode size={15} /> Tukar Kod QR
+                  <button onClick={() => viewQr(u)} className="flex h-9 items-center gap-1.5 rounded-lg border border-cream-300 bg-white px-2.5 text-xs font-semibold text-bark-700 hover:bg-cream-100" title="Lihat atau cetak kod QR">
+                    <QrCode size={15} /> Kod QR
                   </button>
                   <button onClick={() => { setPwModal(u); setNewPassword(null); }} className="flex h-9 items-center gap-1.5 rounded-lg border border-cream-300 bg-white px-2.5 text-xs font-semibold text-bark-700 hover:bg-cream-100" title="Tetapkan semula kata laluan">
                     <KeyRound size={15} /> Reset
@@ -280,6 +298,7 @@ export default function UsersPage() {
         onClose={() => setAddOpen(false)}
         onCreated={(u, qr) => {
           setAddOpen(false);
+          setQrOwner(u);
           setQrModal({ name: u.full_name, username: u.username, position: u.position, code: qr });
           reload();
         }}
@@ -309,7 +328,11 @@ export default function UsersPage() {
       </Modal>
 
       {/* Modal kod QR (dipaparkan sekali sahaja selepas dicipta/jana) */}
-      <QrLoginModal data={qrModal} onClose={() => setQrModal(null)} />
+      <QrLoginModal
+        data={qrModal}
+        onClose={() => setQrModal(null)}
+        onRotate={() => { setQrModal(null); if (qrOwner) setRotateUser(qrOwner); }}
+      />
 
       {/* Sahkan reset kata laluan */}
       <Modal open={!!pwModal && !newPassword} onClose={() => setPwModal(null)} title="Tetapkan Semula Kata Laluan">

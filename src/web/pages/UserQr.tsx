@@ -28,7 +28,7 @@ export function takeUserQrData(): UserQrData | null {
 }
 
 /** Modal paparan kod QR baharu (dipakai oleh halaman Pengguna dan modal Akaun) */
-export function QrLoginModal({ data, onClose }: { data: UserQrData | null; onClose: () => void }) {
+export function QrLoginModal({ data, onClose, onRotate }: { data: UserQrData | null; onClose: () => void; onRotate?: () => void }) {
   return (
     <Modal open={!!data} onClose={onClose} title="Kod QR Log Masuk">
       {data && (
@@ -39,8 +39,8 @@ export function QrLoginModal({ data, onClose }: { data: UserQrData | null; onClo
             <div className="num mt-1 font-mono text-[10px] tracking-wider text-bark-700/40">{data.code}</div>
           </div>
           <p className="text-sm text-bark-700/70">
-            Kod ini adalah <b>kunci log masuk</b>. Cetak dan simpan dengan selamat. Sesiapa yang memegangnya boleh log masuk
-            sebagai pengguna ini. Sistem tidak menyimpan imej kad, jadi cetak sekarang sebelum menutup.
+            Kod ini ialah <b>kunci log masuk</b>. Cetak dan simpan dengan selamat. Sesiapa yang memegangnya boleh log masuk
+            sebagai pengguna ini. Kod disimpan tersulit, jadi kad ini boleh dilihat semula bila-bila masa.
           </p>
           <div className="flex gap-3">
             <Button variant="secondary" full onClick={onClose}>Selesai</Button>
@@ -48,6 +48,11 @@ export function QrLoginModal({ data, onClose }: { data: UserQrData | null; onClo
               <Printer size={17} /> Cetak QR
             </Button>
           </div>
+          {onRotate && (
+            <button onClick={onRotate} className="mx-auto block text-xs font-semibold text-bark-700/60 underline hover:text-bark-900">
+              Tukar ke kod QR baharu (kod lama tidak sah)
+            </button>
+          )}
         </div>
       )}
     </Modal>

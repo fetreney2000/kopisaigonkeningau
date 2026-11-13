@@ -34,7 +34,7 @@ function SetupForm({ onDone }: { onDone: (u: User) => void }) {
         password,
         token,
       });
-      toast(`Akaun admin dicipta. Kod QR log masuk: ${res.qr_code} (tidak boleh dilihat semula; boleh dijana semula di menu Pengguna)`, 'success');
+      toast(`Akaun admin dicipta. Kod QR log masuk: ${res.qr_code} (boleh dilihat semula di menu Pengguna)`, 'success');
       onDone(res.user);
     } catch (e) {
       toast(e instanceof Error ? e.message : 'Ralat', 'error');
