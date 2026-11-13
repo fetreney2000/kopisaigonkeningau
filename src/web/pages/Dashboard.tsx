@@ -15,7 +15,7 @@ const movementIcon = {
 function MovementRow({ m }: { m: Movement }) {
   const info = movementIcon[m.kind];
   return (
-    <Link href="/inventori" className="flex items-center gap-3 px-4 py-3 hover:bg-cream-100/60">
+    <Link href={`/inventori?item=${m.item_id}`} className="flex items-center gap-3 px-4 py-3 hover:bg-cream-100/60">
       <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${info.cls}`}>
         <info.icon size={18} />
       </span>
@@ -112,7 +112,7 @@ export default function Dashboard() {
               const st = labelStatus(it.status);
               const pct = it.min_qty > 0 ? Math.max(0, Math.min(100, (Math.max(0, it.stock) / it.min_qty) * 100)) : 0;
               return (
-                <Link key={it.id} href="/inventori" className="block px-4 py-3.5 hover:bg-cream-100/60">
+                <Link key={it.id} href={`/inventori?item=${it.id}`} className="block px-4 py-3.5 hover:bg-cream-100/60">
                   <div className="flex items-center justify-between gap-3">
                     <div className="min-w-0">
                       <div className="truncate text-[15px] font-semibold text-bark-900">{it.name}</div>

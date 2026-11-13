@@ -523,8 +523,10 @@ const CHIPS: { value: Chip; label: string }[] = [
 ];
 
 export default function Inventory() {
-  const initialLow = window.location.hash.includes('filter=low');
-  const [chip, setChip] = useState<Chip>(initialLow ? 'low' : 'all');
+  // Parameter hash: ?filter=low, ?item=<id> (deep-link dari Dashboard dsb.)
+  const qi = window.location.hash.indexOf('?');
+  const urlParams = new URLSearchParams(qi === -1 ? '' : window.location.hash.slice(qi + 1));
+  const [chip, setChip] = useState<Chip>(urlParams.get('filter') === 'low' ? 'low' : 'all');
   const [q, setQ] = useState('');
   const [dq, setDq] = useState('');
 
@@ -543,8 +545,16 @@ export default function Inventory() {
   }, [dq, chip]);
 
   const { data, loading, error, reload } = useApi<{ items: ItemWithStock[] }>(url);
-  const [detailId, setDetailId] = useState<string | null>(null);
+  const [detailId, setDetailId] = useState<string | null>(urlParams.get('item'));
   const [adding, setAdding] = useState(false);
+
+  /** Tutup butiran + buang parameter ?item= supaya muat semula tidak membukanya lagi */
+  function closeDetail() {
+    setDetailId(null);
+    if (window.location.hash.includes('?')) {
+      history.replaceState(null, '', `${location.pathname}${location.search}#/inventori`);
+    }
+  }
 
   return (
     <div className="space-y-4">
@@ -627,7 +637,7 @@ export default function Inventory() {
       )}
 
       <ItemFormModal open={adding} item={null} onClose={() => setAdding(false)} onSaved={reload} />
-      {detailId && <ItemDetailModal itemId={detailId} onClose={() => setDetailId(null)} onChanged={reload} />}
+      {detailId && <ItemDetailModal itemId={detailId} onClose={closeDetail} onChanged={reload} />}
     </div>
   );
 }
