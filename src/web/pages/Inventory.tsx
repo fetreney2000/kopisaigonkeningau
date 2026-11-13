@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
-  ChevronRight, PackageMinus, PackagePlus, Pencil, Plus, Printer, QrCode, Search, SlidersHorizontal, Trash2, Wallet,
+  CheckCircle2, ChevronRight, PackageMinus, PackagePlus, Pencil, Plus, Printer, QrCode, Search, SlidersHorizontal, Trash2, Wallet,
 } from 'lucide-react';
 import { api, useApi } from '../api';
 import { angka, hariBerbaki, hariDari, hariIni, labelStatus, rm, SOURCE_LABEL, STATUS_LABEL, tarikh } from '../format';
@@ -600,12 +600,26 @@ export default function Inventory() {
       ) : error ? (
         <ErrorState message={error} reload={reload} />
       ) : !data || data.items.length === 0 ? (
-        <EmptyState
-          icon={<Plus size={24} />}
-          title={q ? 'Tiada padanan' : 'Belum ada item'}
-          message={q ? `Tiada item sepadan dengan "${q}".` : 'Mulakan dengan menambah item pertama kedai kopi anda.'}
-          action={!q && <Button onClick={() => setAdding(true)}><Plus size={17} /> Tambah Item Pertama</Button>}
-        />
+        chip === 'low' && !q ? (
+          <EmptyState
+            icon={<CheckCircle2 size={24} />}
+            title="Semua stok mencukupi 👍"
+            message="Tiada item yang perlu dipesan buat masa ini."
+          />
+        ) : (
+          <EmptyState
+            icon={<Plus size={24} />}
+            title={q ? 'Tiada padanan' : chip === 'all' ? 'Belum ada item' : chip === 'low' ? 'Perlu Dipesan' : `Tiada item ${SOURCE_LABEL[chip].toLowerCase()}`}
+            message={
+              q
+                ? `Tiada item sepadan dengan "${q}".`
+                : chip === 'all'
+                  ? 'Mulakan dengan menambah item pertama kedai kopi anda.'
+                  : 'Tambah item jika anda mahu merekodnya dalam inventori.'
+            }
+            action={!q && <Button onClick={() => setAdding(true)}><Plus size={17} /> Tambah Item</Button>}
+          />
+        )
       ) : (
         <Card className="divide-y divide-cream-100">
           {data.items.map((it) => {
