@@ -14,6 +14,7 @@ export function cadanganPesanan(stock: number, minQty: number, dailyRate: number
 
 export default function ReportsPage() {
   const [months, setMonths] = useState<'3' | '6' | '12'>('6');
+  const [bv, setBv] = useState<'total' | 'franchisor' | 'local'>('total');
   const { data, loading, error, reload } = useApi<Reports>(`/api/reports?months=${months}`);
 
   const totals = useMemo(() => {
@@ -156,9 +157,23 @@ export default function ReportsPage() {
 
       {/* Belanja vs penggunaan (jadual bulanan) */}
       <Card className="overflow-hidden">
-        <div className="border-b border-cream-200 px-4 py-3">
-          <h3 className="font-bold text-bark-900">Belanja vs Penggunaan</h3>
-          <p className="text-xs text-bark-700/60">Beza positif = dibeli lebih daripada digunakan (stok bertambah); negatif = stok digunakan melebihi pembelian</p>
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-cream-200 px-4 py-3">
+          <div>
+            <h3 className="font-bold text-bark-900">
+              Belanja vs Penggunaan
+              {bv !== 'total' && <span className="text-bark-700/60"> — {SOURCE_LABEL[bv]}</span>}
+            </h3>
+            <p className="text-xs text-bark-700/60">Beza positif = dibeli lebih daripada digunakan (stok bertambah); negatif = stok digunakan melebihi pembelian</p>
+          </div>
+          <Segmented
+            value={bv}
+            onChange={setBv}
+            options={[
+              { value: 'total', label: 'Jumlah' },
+              { value: 'franchisor', label: 'Francais' },
+              { value: 'local', label: 'Tempatan' },
+            ]}
+          />
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -172,8 +187,8 @@ export default function ReportsPage() {
             </thead>
             <tbody className="divide-y divide-cream-100">
               {[...data.months].reverse().map((m) => {
-                const spend = m.spend_franchisor + m.spend_local;
-                const usage = m.usage_franchisor + m.usage_local;
+                const spend = bv === 'total' ? m.spend_franchisor + m.spend_local : bv === 'franchisor' ? m.spend_franchisor : m.spend_local;
+                const usage = bv === 'total' ? m.usage_franchisor + m.usage_local : bv === 'franchisor' ? m.usage_franchisor : m.usage_local;
                 const delta = spend - usage;
                 return (
                   <tr key={m.ym} className="hover:bg-cream-100/50">
@@ -186,12 +201,22 @@ export default function ReportsPage() {
                   </tr>
                 );
               })}
-              <tr className="bg-cream-100/70 font-bold">
-                <td className="px-4 py-2.5">Jumlah</td>
-                <td className="num px-3 py-2.5 text-right">{rm(totals.spendF + totals.spendL)}</td>
-                <td className="num px-3 py-2.5 text-right">{rm(totals.usageF + totals.usageL)}</td>
-                <td className="num px-4 py-2.5 text-right">{totals.spendF + totals.spendL - (totals.usageF + totals.usageL) >= 0 ? '+' : '−'}{rm(Math.abs(totals.spendF + totals.spendL - (totals.usageF + totals.usageL)))}</td>
-              </tr>
+              {(() => {
+                const sum = (k: 'spend' | 'usage') =>
+                  data.months.reduce((s, m) =>
+                    s + (bv === 'total' ? (k === 'spend' ? m.spend_franchisor + m.spend_local : m.usage_franchisor + m.usage_local)
+                      : bv === 'franchisor' ? (k === 'spend' ? m.spend_franchisor : m.usage_franchisor)
+                      : (k === 'spend' ? m.spend_local : m.usage_local)), 0);
+                const s = sum('spend'), u = sum('usage'), d = s - u;
+                return (
+                  <tr className="bg-cream-100/70 font-bold">
+                    <td className="px-4 py-2.5">Jumlah</td>
+                    <td className="num px-3 py-2.5 text-right">{rm(s)}</td>
+                    <td className="num px-3 py-2.5 text-right">{rm(u)}</td>
+                    <td className="num px-4 py-2.5 text-right">{d >= 0 ? '+' : '−'}{rm(Math.abs(d))}</td>
+                  </tr>
+                );
+              })()}
             </tbody>
           </table>
         </div>

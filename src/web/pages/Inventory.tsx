@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
-  ChevronRight, Download, PackageMinus, PackagePlus, Pencil, Plus, Printer, QrCode, Search, SlidersHorizontal, Trash2,
+  ChevronRight, Download, PackageMinus, PackagePlus, Pencil, Plus, Printer, QrCode, Search, SlidersHorizontal, Trash2, Wallet,
 } from 'lucide-react';
 import { api, useApi } from '../api';
 import { angka, hariBerbaki, hariIni, labelStatus, rm, SOURCE_LABEL, STATUS_LABEL, tarikh } from '../format';
@@ -282,6 +282,43 @@ function ItemDetailModal({ itemId, onClose, onChanged }: { itemId: string; onClo
 
   const item = data?.item;
 
+  // Statistik lanjutan dikira daripada sejarah penuh (100 rekod terkini setiap jenis)
+  const stats = useMemo(() => {
+    if (!data) return null;
+    const since30 = new Date(Date.now() - 30 * 86400_000).toISOString().slice(0, 10);
+    const uc = data.item.unit_cost;
+
+    let buyQty = 0, buyRm = 0, buyN = 0, buy30 = 0, lastBuy: string | null = null;
+    for (const p of data.purchases) {
+      const v = p.qty * p.unit_cost;
+      buyQty += p.qty; buyRm += v; buyN += 1;
+      if (p.date >= since30) buy30 += v;
+      if (!lastBuy || p.date > lastBuy) lastBuy = p.date;
+    }
+    let useQty = 0, useRm = 0, useN = 0, use30 = 0, scanN = 0, lastUse: string | null = null;
+    for (const u of data.usages) {
+      useQty += u.qty; useRm += u.qty * uc; useN += 1;
+      if (u.date >= since30) use30 += u.qty * uc;
+      if (u.method === 'scan') scanN += 1;
+      if (!lastUse || u.date > lastUse) lastUse = u.date;
+    }
+    let adjQty = 0, adjRm = 0, adjN = 0;
+    for (const a of data.adjustments) {
+      adjQty += a.delta; adjRm += a.delta * uc; adjN += 1;
+    }
+    const stockValue = Math.max(0, data.item.stock) * uc;
+    return {
+      stockValue,
+      proj: data.item.projected_monthly_cost,
+      buy30, use30,
+      buyQty, buyRm, buyN, lastBuy,
+      useQty, useRm, useN, scanN, lastUse,
+      adjQty, adjRm, adjN,
+      avgUnit: buyQty > 0 ? buyRm / buyQty : null,
+      scanPct: useN > 0 ? (scanN / useN) * 100 : null,
+    };
+  }, [data]);
+
   return (
     <Modal open onClose={onClose} title="Butiran Item" wide>
       {loading && <Spinner />}
@@ -317,7 +354,7 @@ function ItemDetailModal({ itemId, onClose, onChanged }: { itemId: string; onClo
             </div>
           </div>
 
-          {/* Statistik */}
+          {/* Statistik utama */}
           <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
             <Card className="p-3.5">
               <div className="text-xs font-semibold text-bark-700/60">STOK SEMASA</div>
@@ -341,6 +378,98 @@ function ItemDetailModal({ itemId, onClose, onChanged }: { itemId: string; onClo
               <div className="text-[11px] text-bark-700/60">purata {angka(Math.round(item.daily_rate * 1000) / 1000)} {item.unit}/hari</div>
             </Card>
           </div>
+
+          {/* Statistik kewangan (30 hari) */}
+          {stats && (
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+              <Card className="p-3.5">
+                <div className="text-xs font-semibold text-bark-700/60">NILAI STOK SEMASA</div>
+                <div className="num mt-1 text-lg font-extrabold text-bark-900">{rm(stats.stockValue)}</div>
+                <div className="text-[11px] text-bark-700/60">stok × kos seunit</div>
+              </Card>
+              <Card className="p-3.5">
+                <div className="text-xs font-semibold text-bark-700/60">UNJURAN / BULAN</div>
+                <div className="num mt-1 text-lg font-extrabold text-bark-900">{stats.proj > 0 ? rm(stats.proj) : '–'}</div>
+                <div className="text-[11px] text-bark-700/60">30 hari akan datang</div>
+              </Card>
+              <Card className="p-3.5">
+                <div className="text-xs font-semibold text-bark-700/60">BELANJA (30 HARI)</div>
+                <div className="num mt-1 text-lg font-extrabold text-bark-900">{rm(stats.buy30)}</div>
+                <div className="text-[11px] text-bark-700/60">jumlah pembelian</div>
+              </Card>
+              <Card className="p-3.5">
+                <div className="text-xs font-semibold text-bark-700/60">DIGUNA (30 HARI)</div>
+                <div className="num mt-1 text-lg font-extrabold text-bark-900">{rm(stats.use30)}</div>
+                <div className="text-[11px] text-bark-700/60">
+                  {stats.buy30 > 0 ? `${Math.round((stats.use30 / stats.buy30) * 100)}% daripada belanja` : 'kos penggunaan'}
+                </div>
+              </Card>
+            </div>
+          )}
+
+          {/* Ringkasan sepanjang rekod */}
+          {stats && (
+            <Card className="overflow-hidden">
+              <div className="border-b border-cream-200 px-4 py-3">
+                <h3 className="font-bold text-bark-900">Ringkasan Sepanjang Rekod</h3>
+                <p className="text-xs text-bark-700/60">Berdasarkan 100 rekod terkini setiap jenis pergerakan</p>
+              </div>
+              <div className="divide-y divide-cream-100 text-sm">
+                <div className="flex items-center gap-3 px-4 py-3">
+                  <span className="flex h-8 w-8 items-center justify-center bg-leaf-100 text-leaf-700"><PackagePlus size={15} /></span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block font-semibold text-bark-900">Dibeli</span>
+                    <span className="num block text-xs text-bark-700/60">
+                      {stats.buyN} rekod{stats.lastBuy ? ` · terakhir ${tarikh(stats.lastBuy)}` : ''}
+                    </span>
+                  </span>
+                  <span className="num text-right">
+                    <span className="block text-[15px] font-bold text-bark-900">{angka(stats.buyQty)} {item.unit}</span>
+                    <span className="block text-[11px] text-bark-700/60">{rm(stats.buyRm)}</span>
+                  </span>
+                </div>
+                <div className="flex items-center gap-3 px-4 py-3">
+                  <span className="flex h-8 w-8 items-center justify-center bg-cream-200 text-coffee-500"><PackageMinus size={15} /></span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block font-semibold text-bark-900">Digunakan</span>
+                    <span className="num block text-xs text-bark-700/60">
+                      {stats.useN} rekod{stats.lastUse ? ` · terakhir ${tarikh(stats.lastUse)}` : ''}{stats.scanPct !== null ? ` · ${Math.round(stats.scanPct)}% imbasan` : ''}
+                    </span>
+                  </span>
+                  <span className="num text-right">
+                    <span className="block text-[15px] font-bold text-bark-900">{angka(stats.useQty)} {item.unit}</span>
+                    <span className="block text-[11px] text-bark-700/60">{rm(stats.useRm)}</span>
+                  </span>
+                </div>
+                <div className="flex items-center gap-3 px-4 py-3">
+                  <span className="flex h-8 w-8 items-center justify-center bg-cream-200 text-bark-700"><SlidersHorizontal size={15} /></span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block font-semibold text-bark-900">Pelarasan bersih</span>
+                    <span className="num block text-xs text-bark-700/60">{stats.adjN} rekod</span>
+                  </span>
+                  <span className="num text-right">
+                    <span className={`block text-[15px] font-bold ${stats.adjQty < 0 ? 'text-berry-600' : 'text-bark-900'}`}>
+                      {stats.adjQty > 0 ? '+' : '−'}{angka(Math.abs(stats.adjQty))} {item.unit}
+                    </span>
+                    <span className="block text-[11px] text-bark-700/60">{rm(Math.abs(stats.adjRm))}</span>
+                  </span>
+                </div>
+                {stats.avgUnit !== null && (
+                  <div className="flex items-center gap-3 px-4 py-3">
+                    <span className="flex h-8 w-8 items-center justify-center bg-cream-200 text-bark-700"><Wallet size={15} /></span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block font-semibold text-bark-900">Kos seunit purata sebenar</span>
+                      <span className="block text-xs text-bark-700/60">jumlah dibeli ÷ jumlah kuantiti</span>
+                    </span>
+                    <span className="num text-right text-[15px] font-bold text-bark-900">
+                      {rm(stats.avgUnit)}
+                      {stats.avgUnit > item.unit_cost && <span className="block text-[11px] font-medium text-berry-600">kos semasa {rm(item.unit_cost)} lebih rendah</span>}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </Card>
+          )}
 
           {item.note && <p className="rounded-xl bg-cream-100 px-4 py-3 text-sm text-bark-700">📝 {item.note}</p>}
 
