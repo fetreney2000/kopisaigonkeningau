@@ -175,8 +175,8 @@ export default function LoginPage({ me, onLogin }: { me: AuthMe; onLogin: (u: Us
             <Coffee size={28} />
           </div>
           <div>
-            <h1 className="text-2xl font-extrabold text-bark-900">Saigon Inventori</h1>
-            <p className="text-sm text-bark-700/60">Sistem inventori kedai kopi anda</p>
+            <h1 className="text-2xl font-extrabold text-bark-900">Kopi Saigon Keningau</h1>
+            <p className="text-sm text-bark-700/60">Tiada Hari Tanpa Kopi</p>
           </div>
         </div>
 

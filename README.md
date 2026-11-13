@@ -1,4 +1,4 @@
-# Saigon Inventori ☕
+# Kopi Saigon Keningau ☕
 
 Sistem inventori ringkas untuk kedai kopi — dibina khas untuk menjejak dua sumber stok:
 **item francais** dan **item kedai tempatan**.

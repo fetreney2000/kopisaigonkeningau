@@ -72,8 +72,8 @@ function Sidebar({ route }: { route: string }) {
           <Coffee size={22} />
         </div>
         <div>
-          <div className="font-bold text-cream-50">Saigon Inventori</div>
-          <div className="text-xs text-cream-50/50">Kedai kopi anda</div>
+          <div className="font-bold text-cream-50">Kopi Saigon Keningau</div>
+          <div className="text-xs text-cream-50/50">Tiada Hari Tanpa Kopi</div>
         </div>
       </div>
       <nav className="flex flex-col gap-1">
