@@ -124,7 +124,7 @@ export function Modal({ open, onClose, title, children, wide }: { open: boolean;
             <X size={20} />
           </button>
         </div>
-        <div className="overflow-y-auto px-5 py-5 pb-safe">{children}</div>
+        <div className="overflow-y-auto px-5 pt-5 pb-[max(1.25rem,env(safe-area-inset-bottom))]">{children}</div>
       </div>
     </div>
   );
