@@ -3,7 +3,7 @@ import { ClipboardCopy, Download, ListOrdered, PackageMinus, ReceiptText, Slider
 import { useApi } from '../api';
 import { angka, bulanPendek, hariBerbaki, rm, rmShort, SOURCE_LABEL, tarikh } from '../format';
 import { SpendChart } from '../chart';
-import { Badge, Button, Card, ErrorState, SectionTitle, Segmented, Spinner, toast } from '../ui';
+import { Badge, Button, Card, EmptyState, ErrorState, SectionTitle, Segmented, Spinner, toast } from '../ui';
 import type { Reports } from '../../shared/types';
 
 /** Kuantiti pesanan cadangan: bawa stok ke paras selamat (minimum atau 14 hari penggunaan) */
@@ -304,7 +304,7 @@ export default function ReportsPage() {
           <span className="flex items-center gap-1.5"><ListOrdered size={14} /> Senarai Pesanan ({reorder.length})</span>
         </SectionTitle>
         {reorder.length === 0 ? (
-          <Card className="px-4 py-5 text-center text-sm text-bark-700/60">Tiada item perlu dipesan — semua stok mencukupi.</Card>
+          <EmptyState icon={<ListOrdered size={22} />} title="Tiada item perlu dipesan" message="Semua stok mencukupi buat masa ini." />
         ) : (
           <div className="space-y-3">
             {(['franchisor', 'local'] as const).map((src) => {
@@ -346,7 +346,7 @@ export default function ReportsPage() {
       <section>
         <SectionTitle>Penggunaan Tertinggi (30 Hari)</SectionTitle>
         {data.top_usage.length === 0 ? (
-          <Card className="px-4 py-5 text-center text-sm text-bark-700/60">Tiada rekod penggunaan dalam 30 hari lalu.</Card>
+          <EmptyState icon={<UserRound size={22} />} title="Tiada rekod penggunaan" message="Tiada rekod penggunaan dalam 30 hari lalu." />
         ) : (
           <Card className="divide-y divide-cream-100">
             {data.top_usage.map((t, i) => {
@@ -381,7 +381,7 @@ export default function ReportsPage() {
           <span className="flex items-center gap-1.5"><UserRound size={14} /> Pengeluaran mengikut Pengguna (30 Hari)</span>
         </SectionTitle>
         {data.staff_usage.length === 0 ? (
-          <Card className="px-4 py-5 text-center text-sm text-bark-700/60">Tiada rekod pengeluaran dalam 30 hari lalu.</Card>
+          <EmptyState icon={<PackageMinus size={22} />} title="Tiada rekod pengeluaran" message="Tiada rekod pengeluaran dalam 30 hari lalu." />
         ) : (
           <Card className="divide-y divide-cream-100">
             {data.staff_usage.map((s) => {
@@ -413,7 +413,7 @@ export default function ReportsPage() {
           <span className="flex items-center gap-1.5"><SlidersHorizontal size={14} /> Pelarasan Stok ({data.adjustments.length})</span>
         </SectionTitle>
         {data.adjustments.length === 0 ? (
-          <Card className="px-4 py-5 text-center text-sm text-bark-700/60">Tiada pelarasan dalam tempoh ini.</Card>
+          <EmptyState icon={<SlidersHorizontal size={22} />} title="Tiada pelarasan" message="Tiada pelarasan dalam tempoh ini." />
         ) : (
           <>
             {(() => {
@@ -471,7 +471,7 @@ export default function ReportsPage() {
           <span className="flex items-center gap-1.5"><ReceiptText size={14} /> Belanja mengikut Kategori</span>
         </SectionTitle>
         {data.by_category.length === 0 ? (
-          <Card className="px-4 py-5 text-center text-sm text-bark-700/60">Tiada rekod dalam tempoh ini.</Card>
+          <EmptyState icon={<ReceiptText size={22} />} title="Tiada rekod" message="Tiada rekod dalam tempoh ini." />
         ) : (
           <Card className="divide-y divide-cream-100">
             {data.by_category.map((k) => {

@@ -1,5 +1,5 @@
 import { Link } from './link';
-import { AlertTriangle, ArrowDownCircle, ArrowUpCircle, Boxes, ChevronRight, ScanLine, SlidersHorizontal, TrendingUp, Wallet } from 'lucide-react';
+import { AlertTriangle, ArrowDownCircle, ArrowUpCircle, Boxes, ChevronRight, SlidersHorizontal, TrendingUp, Wallet } from 'lucide-react';
 import { useApi } from '../api';
 import { angka, hariBerbaki, labelStatus, rm, rmShort, SOURCE_LABEL, tarikh } from '../format';
 import { SourceBar } from '../chart';
@@ -24,7 +24,7 @@ function MovementRow({ m }: { m: Movement }) {
         <div className="text-xs text-bark-700/60">
           {tarikh(m.date)} · {info.label}
           {m.kind === 'purchase' && m.unit_cost !== null ? ` @ ${rm(m.unit_cost)}` : ''}
-          {m.kind === 'adjustment' && m.note ? ` · ${m.note}` : m.note ? ` · ${m.note}` : ''}
+          {m.note ? ` · ${m.note}` : ''}
         </div>
       </div>
       <span className={`num shrink-0 text-sm font-bold ${m.kind === 'usage' || m.qty < 0 ? 'text-berry-600' : 'text-leaf-600'}`}>
@@ -87,22 +87,6 @@ export default function Dashboard() {
           <div className="num mt-2 text-xl font-extrabold text-bark-900 md:text-2xl">{rmShort(projectionTotal)}</div>
           <div className="mt-0.5 text-xs text-bark-700/60">kos penggunaan akan datang</div>
         </Card>
-      </div>
-
-      {/* Tindakan pantas */}
-      <div className="grid grid-cols-3 gap-3">
-        <Link href="/imbas" className="flex min-h-[72px] flex-col items-center justify-center gap-1.5 rounded-2xl bg-bark-800 text-cream-50 shadow-sm transition-colors hover:bg-bark-700">
-          <ScanLine size={20} />
-          <span className="text-[13px] font-semibold">Imbas Keluar</span>
-        </Link>
-        <Link href="/pembelian" className="flex min-h-[72px] flex-col items-center justify-center gap-1.5 rounded-2xl bg-white shadow-sm transition-colors hover:bg-cream-50">
-          <ArrowDownCircle size={20} className="text-leaf-600" />
-          <span className="text-[13px] font-semibold text-bark-800">Stok Masuk</span>
-        </Link>
-        <Link href="/laporan" className="flex min-h-[72px] flex-col items-center justify-center gap-1.5 rounded-2xl bg-white shadow-sm transition-colors hover:bg-cream-50">
-          <TrendingUp size={20} className="text-coffee-500" />
-          <span className="text-[13px] font-semibold text-bark-800">Unjuran</span>
-        </Link>
       </div>
 
       {/* Perlu perhatian */}

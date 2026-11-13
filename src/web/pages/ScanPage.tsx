@@ -1,25 +1,19 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import QrScanner from 'qr-scanner';
-import { CameraOff, PackageMinus, PackagePlus, ScanLine, Search } from 'lucide-react';
+import { CameraOff, PackageMinus, ScanLine, Search } from 'lucide-react';
 import { api } from '../api';
-import { angka, hariIni, rm } from '../format';
-import { Button, Card, Field, inputCls, Modal, Segmented, toast } from '../ui';
+import { angka, hariIni } from '../format';
+import { Button, Card, Field, inputCls, Modal, toast } from '../ui';
 import { ItemPickerField } from './ItemPicker';
 import type { ItemWithStock } from '../../shared/types';
-import { useAuth } from '../auth';
 
-type Mode = 'usage' | 'purchase';
-
-function ConfirmCard({ item, method, canPurchase, onDone, onCancel }: {
+function ConfirmCard({ item, method, onDone, onCancel }: {
   item: ItemWithStock;
   method: 'scan' | 'manual';
-  canPurchase: boolean;
   onDone: () => void;
   onCancel: () => void;
 }) {
-  const [mode, setMode] = useState<Mode>('usage');
   const [qty, setQty] = useState('1');
-  const [cost, setCost] = useState(canPurchase ? String(item.unit_cost) : '');
   const [note, setNote] = useState('');
   const [saving, setSaving] = useState(false);
 
@@ -31,13 +25,8 @@ function ConfirmCard({ item, method, canPurchase, onDone, onCancel }: {
     }
     setSaving(true);
     try {
-      if (mode === 'usage') {
-        await api.post('/api/usages', { item_id: item.id, qty: q, date: hariIni(), method, note });
-        toast(`Penggunaan direkod: ${angka(q)} ${item.unit} ${item.name}`);
-      } else {
-        await api.post('/api/purchases', { item_id: item.id, qty: q, unit_cost: parseFloat(cost) || 0, date: hariIni(), note });
-        toast(`Stok masuk direkod: ${angka(q)} ${item.unit} ${item.name}`);
-      }
+      await api.post('/api/usages', { item_id: item.id, qty: q, date: hariIni(), method, note });
+      toast(`Penggunaan direkod: ${angka(q)} ${item.unit} ${item.name}`);
       onDone();
     } catch (e) {
       toast(e instanceof Error ? e.message : 'Ralat', 'error');
@@ -55,45 +44,23 @@ function ConfirmCard({ item, method, canPurchase, onDone, onCancel }: {
         </div>
       </div>
 
-      <Segmented
-        value={mode}
-        onChange={(v) => setMode(v)}
-        options={canPurchase ? [
-          { value: 'usage', label: 'Stok Keluar (guna)' },
-          { value: 'purchase', label: 'Stok Masuk (beli)' },
-        ] : [{ value: 'usage', label: 'Stok Keluar (guna)' }]}
-      />
-
-      <div className={canPurchase ? 'grid grid-cols-2 gap-3' : ''}>
-        <Field label="Kuantiti">
-          <div className="flex items-stretch gap-2">
-            <button
-              type="button"
-              onClick={() => setQty((v) => String(Math.max(0.01, (parseFloat(v) || 0) - 1)))}
-              className="w-11 shrink-0 rounded-xl border border-cream-300 bg-white text-lg font-bold text-bark-800 hover:bg-cream-100"
-              aria-label="Kurangkan"
-            >−</button>
-            <input className={`${inputCls} num text-center`} type="number" inputMode="decimal" step="any" min="0" value={qty} onChange={(e) => setQty(e.target.value)} />
-            <button
-              type="button"
-              onClick={() => setQty((v) => String((parseFloat(v) || 0) + 1))}
-              className="w-11 shrink-0 rounded-xl border border-cream-300 bg-white text-lg font-bold text-bark-800 hover:bg-cream-100"
-              aria-label="Tambah"
-            >+</button>
-          </div>
-        </Field>
-        {mode === 'purchase' && (
-          <Field label="Kos Seunit (RM)">
-            <input className={`${inputCls} num`} type="number" inputMode="decimal" step="0.01" min="0" value={cost} onChange={(e) => setCost(e.target.value)} />
-          </Field>
-        )}
-      </div>
-
-      {mode === 'purchase' && (
-        <div className="num rounded-xl bg-cream-100 px-4 py-3 text-sm text-bark-700">
-          Jumlah: <b className="text-bark-900">{rm((parseFloat(qty) || 0) * (parseFloat(cost) || 0))}</b>
+      <Field label="Kuantiti">
+        <div className="flex items-stretch gap-2">
+          <button
+            type="button"
+            onClick={() => setQty((v) => String(Math.max(0.01, (parseFloat(v) || 0) - 1)))}
+            className="w-11 shrink-0 rounded-xl border border-cream-300 bg-white text-lg font-bold text-bark-800 hover:bg-cream-100"
+            aria-label="Kurangkan"
+          >−</button>
+          <input className={`${inputCls} num text-center`} type="number" inputMode="decimal" step="any" min="0" value={qty} onChange={(e) => setQty(e.target.value)} />
+          <button
+            type="button"
+            onClick={() => setQty((v) => String((parseFloat(v) || 0) + 1))}
+            className="w-11 shrink-0 rounded-xl border border-cream-300 bg-white text-lg font-bold text-bark-800 hover:bg-cream-100"
+            aria-label="Tambah"
+          >+</button>
         </div>
-      )}
+      </Field>
 
       <Field label="Nota">
         <input className={inputCls} value={note} onChange={(e) => setNote(e.target.value)} placeholder="pilihan" />
@@ -102,7 +69,7 @@ function ConfirmCard({ item, method, canPurchase, onDone, onCancel }: {
       <div className="flex gap-3">
         <Button variant="secondary" full onClick={onCancel}>Batal</Button>
         <Button full onClick={save} disabled={saving}>
-          {mode === 'usage' ? <><PackageMinus size={17} /> Sahkan Keluar</> : <><PackagePlus size={17} /> Sahkan Masuk</>}
+          <PackageMinus size={17} /> Sahkan Keluar
         </Button>
       </div>
     </div>
@@ -110,8 +77,6 @@ function ConfirmCard({ item, method, canPurchase, onDone, onCancel }: {
 }
 
 export default function ScanPage() {
-  const { user } = useAuth();
-  const isStaff = user?.role !== 'admin';
   const videoRef = useRef<HTMLVideoElement>(null);
   const scannerRef = useRef<QrScanner | null>(null);
   const [cameraOk, setCameraOk] = useState<boolean | null>(null); // null = memeriksa
@@ -208,9 +173,8 @@ export default function ScanPage() {
   return (
     <div className="space-y-5">
       <p className="px-1 text-sm text-bark-700/70">
-        Halakan kamera ke kod QR pada item untuk merekod <b>stok keluar</b> (penggunaan)
-        {!isStaff && <> atau <b>stok masuk</b> (pembelian)</>}.
-        {isStaff && ' Rakaman pembelian hanya boleh dibuat oleh admin.'}
+        Halakan kamera ke kod QR pada item untuk merekod <b>stok keluar</b> (penggunaan).
+        Pembelian stok direkod melalui halaman <b>Pembelian</b> oleh admin.
       </p>
 
       {/* Kamera */}
@@ -260,7 +224,7 @@ export default function ScanPage() {
 
         {manualOpen && manualItem && (
           <div className="mt-4">
-            <ConfirmCard item={manualItem} method="manual" canPurchase={!isStaff} onDone={() => { setManualItem(null); setManualOpen(false); }} onCancel={() => setManualItem(null)} />
+            <ConfirmCard item={manualItem} method="manual" onDone={() => { setManualItem(null); setManualOpen(false); }} onCancel={() => setManualItem(null)} />
           </div>
         )}
       </Card>
@@ -271,7 +235,6 @@ export default function ScanPage() {
           <ConfirmCard
             item={foundItem}
             method="scan"
-            canPurchase={!isStaff}
             onDone={reset}
             onCancel={reset}
           />

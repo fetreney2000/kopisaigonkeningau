@@ -71,7 +71,6 @@ function QrLogin({ onDone }: { onDone: (u: User) => void }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const scannerRef = useRef<QrScanner | null>(null);
   const [cameraOk, setCameraOk] = useState<boolean | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const busy = useRef(false);
 
   const tryLogin = useCallback(async (code: string) => {
@@ -142,7 +141,6 @@ function QrLogin({ onDone }: { onDone: (u: User) => void }) {
           </div>
         )}
       </div>
-      {error && <p className="text-center text-sm text-berry-600">{error}</p>}
     </div>
   );
 }

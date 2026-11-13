@@ -37,22 +37,11 @@ export function Badge({ children, className = '' }: { children: ReactNode; class
   return <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${className}`}>{children}</span>;
 }
 
-export function SourceBadge({ source }: { source: 'franchisor' | 'local' }) {
-  return source === 'franchisor' ? (
-    <Badge className="bg-bark-800 text-cream-100">Francais</Badge>
-  ) : (
-    <Badge className="bg-caramel-400/30 text-coffee-500">Tempatan</Badge>
-  );
-}
-
 // ------------------------------------------------------------------ Kad
 
-export function Card({ children, className = '', onClick }: { children: ReactNode; className?: string; onClick?: () => void }) {
+export function Card({ children, className = '' }: { children: ReactNode; className?: string }) {
   return (
-    <div
-      onClick={onClick}
-      className={`rounded-2xl bg-white shadow-[0_1px_3px_rgba(43,33,26,0.08),0_1px_2px_rgba(43,33,26,0.04)] ${onClick ? 'cursor-pointer hover:shadow-md transition-shadow' : ''} ${className}`}
-    >
+    <div className={`rounded-2xl bg-white shadow-[0_1px_3px_rgba(43,33,26,0.08),0_1px_2px_rgba(43,33,26,0.04)] ${className}`}>
       {children}
     </div>
   );

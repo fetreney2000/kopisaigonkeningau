@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
-  ChevronRight, Download, PackageMinus, PackagePlus, Pencil, Plus, Printer, QrCode, Search, SlidersHorizontal, Trash2, Wallet,
+  ChevronRight, PackageMinus, PackagePlus, Pencil, Plus, Printer, QrCode, Search, SlidersHorizontal, Trash2, Wallet,
 } from 'lucide-react';
 import { api, useApi } from '../api';
 import { angka, hariBerbaki, hariIni, labelStatus, rm, SOURCE_LABEL, STATUS_LABEL, tarikh } from '../format';
@@ -8,10 +8,8 @@ import {
   Badge, Button, Card, ConfirmModal, EmptyState, ErrorState, Field, inputCls, Modal, Segmented, SectionTitle, Spinner, toast,
 } from '../ui';
 import { navigate } from '../App';
-import QRCodeImg, { qrPngDataUrl } from './QRCodeImg';
+import QRCodeImg from './QRCodeImg';
 import type { Item, ItemDetail, ItemWithStock, Source } from '../../shared/types';
-
-// ------------------------------------------------------------------ Kod QR (dipindah ke QRCodeImg.tsx)
 
 // ------------------------------------------------------------------ Borang item
 
@@ -252,16 +250,6 @@ function ItemDetailModal({ itemId, onClose, onChanged }: { itemId: string; onClo
   const [edit, setEdit] = useState(false);
   const [confirmDel, setConfirmDel] = useState(false);
 
-  async function downloadQr() {
-    if (!data) return;
-    const url = await qrPngDataUrl(data.item.id, data.item.name);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `QR-${data.item.id}.png`;
-    a.click();
-    toast('Kod QR dimuat turun');
-  }
-
   async function del() {
     if (!data) return;
     await api.del(`/api/items/${data.item.id}`);
@@ -346,9 +334,6 @@ function ItemDetailModal({ itemId, onClose, onChanged }: { itemId: string; onClo
               <div className="mt-2 flex gap-2">
                 <Button variant="secondary" className="!min-h-9 !px-3 !text-xs" onClick={() => navigate(`/label/${item.id}`)}>
                   <Printer size={14} /> Cetak Label
-                </Button>
-                <Button variant="secondary" className="!min-h-9 !px-3 !text-xs" onClick={downloadQr}>
-                  <Download size={14} /> QR PNG
                 </Button>
               </div>
             </div>
@@ -577,7 +562,7 @@ export default function Inventory() {
         </div>
         <Button onClick={() => navigate('/label')} variant="secondary" className="!px-3.5 shrink-0" aria-label="Cetak label pukal">
           <Printer size={18} />
-          <span className="hidden md:inline">Cetak Label</span>
+          <span className="hidden md:inline">Cetak Pukal</span>
         </Button>
         <Button onClick={() => setAdding(true)} className="!px-3.5 shrink-0" aria-label="Tambah item">
           <Plus size={19} />

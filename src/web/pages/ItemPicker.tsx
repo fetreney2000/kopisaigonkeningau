@@ -7,27 +7,24 @@ import type { ItemWithStock } from '../../shared/types';
 
 /** Pemilih item berasaskan modal — selesa digunakan pada telefon (sasaran sentuh besar) */
 export function ItemPicker({
-  open, onClose, onPick, exclude, title = 'Pilih Item',
+  open, onClose, onPick,
 }: {
   open: boolean;
   onClose: () => void;
   onPick: (item: ItemWithStock) => void;
-  exclude?: string[];
-  title?: string;
 }) {
   const { data } = useApi<{ items: ItemWithStock[] }>('/api/items');
   const [q, setQ] = useState('');
 
   const items = useMemo(() => {
     let list = data?.items ?? [];
-    if (exclude?.length) list = list.filter((i) => !exclude.includes(i.id));
     const ql = q.trim().toLowerCase();
     if (ql) list = list.filter((i) => i.name.toLowerCase().includes(ql) || i.id.toLowerCase().includes(ql) || i.category.toLowerCase().includes(ql));
     return list;
-  }, [data, q, exclude]);
+  }, [data, q]);
 
   return (
-    <Modal open={open} onClose={onClose} title={title}>
+    <Modal open={open} onClose={onClose} title="Pilih Item">
       <div className="relative mb-3">
         <Search size={17} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-bark-700/40" />
         <input className={`${inputCls} !pl-10`} placeholder="Cari item…" value={q} onChange={(e) => setQ(e.target.value)} autoFocus />
@@ -59,12 +56,10 @@ export function ItemPicker({
 }
 
 /** Butang yang membuka ItemPicker; menunjukkan item terpilih */
-export function ItemPickerField({ label, item, onPick, placeholder = '— Pilih item —', exclude }: {
+export function ItemPickerField({ label, item, onPick }: {
   label: string;
   item: ItemWithStock | null;
   onPick: (i: ItemWithStock) => void;
-  placeholder?: string;
-  exclude?: string[];
 }) {
   const [open, setOpen] = useState(false);
   return (
@@ -75,11 +70,11 @@ export function ItemPickerField({ label, item, onPick, placeholder = '— Pilih 
         className={`${inputCls} flex items-center justify-between text-left`}
       >
         <span className={item ? '' : 'text-bark-700/40'}>
-          {item ? item.name : placeholder}
+          {item ? item.name : '— Pilih item —'}
         </span>
         {item && <Badge className={item.source === 'franchisor' ? 'bg-bark-800 text-cream-100' : 'bg-caramel-400/30 text-coffee-500'}>{SOURCE_LABEL[item.source]}</Badge>}
       </button>
-      <ItemPicker open={open} onClose={() => setOpen(false)} onPick={onPick} exclude={exclude} />
+      <ItemPicker open={open} onClose={() => setOpen(false)} onPick={onPick} />
     </div>
   );
 }
