@@ -1,0 +1,108 @@
+@import "tailwindcss";
+
+@theme {
+  /* Tema kopi — krem hangat + espresso */
+  --color-cream-50: #fbf8f3;
+  --color-cream-100: #f6f0e7;
+  --color-cream-200: #ece2d2;
+  --color-cream-300: #ddcdb5;
+
+  --color-bark-950: #241a12;
+  --color-bark-900: #2f2217;
+  --color-bark-800: #3e2a1a;
+  --color-bark-700: #553a23;
+  --color-bark-600: #6e4b2a;
+
+  --color-coffee-500: #8a5a33;
+  --color-coffee-400: #a5703f;
+  --color-caramel-400: #c98f52;
+  --color-caramel-300: #dcae7a;
+
+  --color-leaf-700: #2c6a45;
+  --color-leaf-600: #2f7d4f;
+  --color-leaf-100: #e3f0e7;
+
+  --color-amber-warn: #b45309;
+  --color-amber-soft: #fdf1e0;
+  --color-berry-600: #b02a2a;
+  --color-berry-soft: #fbe9e7;
+
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  background: var(--color-cream-100);
+  color: var(--color-bark-900);
+  font-family: var(--font-sans);
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Nombor sejajar supaya lajur angka senang dibaca */
+.num {
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+/* Ruang selamat khas iPhone untuk bar navigasi bawah */
+.pb-safe {
+  padding-bottom: max(env(safe-area-inset-bottom), 0px);
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-cream-300);
+  border-radius: 999px;
+}
+
+@media print {
+  @page {
+    size: A4;
+    margin: 0;
+  }
+  .no-print {
+    display: none !important;
+  }
+  /* Buat lapisan aplikasi (sidebar, padding) supaya helaian A4 tepat */
+  html, body {
+    background: #fff;
+    margin: 0;
+    padding: 0;
+  }
+  .print-reset {
+    padding-left: 0 !important;
+  }
+  main {
+    max-width: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+  body {
+    background: #fff;
+  }
+  /* Helaian pukal: saiz A4 tepat, satu lembar setiap halaman */
+  .sheet {
+    width: 210mm !important;
+    height: 297mm !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+    page-break-after: always;
+    break-after: page;
+  }
+  .sheet:last-child {
+    page-break-after: auto;
+    break-after: auto;
+  }
+  .print-area {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+}

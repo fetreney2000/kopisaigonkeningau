@@ -1,0 +1,20 @@
+# Dependensi & binaan
+node_modules/
+dist/
+.wrangler/
+
+# Persekitaran & rahsia
+.dev.vars
+.env
+.env.*
+*.local
+
+# Log & OS
+*.log
+npm-debug.log*
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
