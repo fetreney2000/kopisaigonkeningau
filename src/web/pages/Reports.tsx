@@ -59,12 +59,17 @@ export default function ReportsPage() {
 
   function exportCsv() {
     if (!data) return;
+    // Sel teks CSV: quote dan halang formula Excel (=, +, -, @ di awal sel)
+    const cell = (v: string): string => {
+      const s = v.replace(/"/g, '""');
+      return `"${/^[=+\-@\t\r]/.test(v) ? `'${s}` : s}"`;
+    };
     const lines: string[] = [];
     lines.push('Unjuran per Item');
     lines.push('Item,Sumber,Stok Semasa,Unit,Purata Harian,Baki Hari,Unjuran Kos Bulanan (RM)');
     for (const it of data.items) {
       lines.push([
-        `"${it.name.replace(/"/g, '""')}"`, SOURCE_LABEL[it.source], angka(it.stock), it.unit,
+        cell(it.name), SOURCE_LABEL[it.source], angka(it.stock), cell(it.unit),
         angka(Math.round(it.daily_rate * 1000) / 1000),
         it.days_left === null ? '' : String(Math.round(it.days_left)),
         angka(it.projected_monthly_cost),
@@ -82,25 +87,25 @@ export default function ReportsPage() {
     lines.push('Senarai Pesanan');
     lines.push('Item,Sumber,Cadangan Kuantiti,Unit');
     for (const { it, qty } of reorder) {
-      lines.push([`"${it.name.replace(/"/g, '""')}"`, SOURCE_LABEL[it.source], angka(qty), it.unit].join(','));
+      lines.push([cell(it.name), SOURCE_LABEL[it.source], angka(qty), cell(it.unit)].join(','));
     }
     lines.push('');
     lines.push('Pengeluaran mengikut Pengguna (30 hari)');
     lines.push('Pengguna,Bilangan Rekod,Kuantiti,Nilai (RM)');
     for (const s of data.staff_usage) {
-      lines.push([`"${s.user_name ?? 'Tidak direkod'}"`, angka(s.count), angka(s.qty), angka(s.cost)].join(','));
+      lines.push([cell(s.user_name ?? 'Tidak direkod'), angka(s.count), angka(s.qty), angka(s.cost)].join(','));
     }
     lines.push('');
     lines.push('Pelarasan Stok');
     lines.push('Tarikh,Item,Kuantiti (Δ),Sebab,Nilai (RM)');
     for (const a of data.adjustments) {
-      lines.push([a.date, `"${a.item_name.replace(/"/g, '""')}"`, angka(a.delta), `"${a.reason.replace(/"/g, '""')}"`, angka(a.value)].join(','));
+      lines.push([a.date, cell(a.item_name), angka(a.delta), cell(a.reason), angka(a.value)].join(','));
     }
     lines.push('');
     lines.push('Mengikut Kategori');
     lines.push('Kategori,Belanja (RM),Kos Penggunaan (RM)');
     for (const k of data.by_category) {
-      lines.push([`"${k.category}"`, angka(k.spend), angka(k.usage_cost)].join(','));
+      lines.push([cell(k.category), angka(k.spend), angka(k.usage_cost)].join(','));
     }
     const blob = new Blob(['\uFEFF' + lines.join('\n')], { type: 'text/csv;charset=utf-8' });
     const a = document.createElement('a');
@@ -387,7 +392,7 @@ export default function ReportsPage() {
             {data.staff_usage.map((s) => {
               const max = data.staff_usage[0].cost || 1;
               return (
-                <div key={s.user_name ?? 'x'} className="px-4 py-3">
+                <div key={s.user_id ?? 'tiada-perekod'} className="px-4 py-3">
                   <div className="flex items-center justify-between gap-3">
                     <div className="min-w-0">
                       <div className="truncate text-[15px] font-semibold text-bark-900">{s.user_name ?? 'Tidak direkod (lama)'}</div>

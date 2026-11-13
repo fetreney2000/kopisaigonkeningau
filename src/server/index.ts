@@ -46,6 +46,20 @@ function str(v: unknown): string {
   return typeof v === 'string' ? v.trim() : '';
 }
 
+/** Had atas kuantiti per rekod (elak nilai tidak munasabah masuk pangkalan data) */
+const MAX_QTY = 1_000_000;
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+/** Tarikh rekod: kosong = hari ini (waktu KL); nilai lain mesti YYYY-MM-DD yang sah */
+function recordDate(v: unknown): string | null {
+  const s = str(v);
+  if (!s) return today();
+  if (!DATE_RE.test(s)) return null;
+  const d = new Date(s + 'T00:00:00Z');
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toISOString().slice(0, 10) === s ? s : null;
+}
+
 function statusOf(stock: number, minQty: number): StockStatus {
   if (stock <= 0) return 'habis';
   if (minQty > 0 && stock <= minQty) return 'rendah';
@@ -405,6 +419,7 @@ api.patch('/users/:id', adminOnly, async (c) => {
 });
 
 api.post('/users/:id/reset-password', adminOnly, async (c) => {
+  const me = c.get('user')!;
   const b = await c.req.json().catch(() => null) as Record<string, unknown> | null;
   const password = str(b?.password) || tempPassword();
   if (password.length < 8) return jsonError('Kata laluan mesti sekurang-kurangnya 8 aksara');
@@ -417,7 +432,17 @@ api.post('/users/:id/reset-password', adminOnly, async (c) => {
   const hash = await hashPassword(password, pepperOf(c.env));
   const r = await c.env.DB.prepare('UPDATE users SET password_hash = ?2 WHERE id = ?1').bind(id, hash).run();
   if (!r.success) return jsonError('Gagal menetapkan semula kata laluan', 500);
-  await deleteUserSessions(c.env.DB, id); // sesi lama tidak lagi sah
+
+  // Reset sendiri: kekalkan sesi semasa (seperti tukar kata laluan); orang lain: lumpuhkan semua
+  if (id === me.id) {
+    const token = readCookie(c.req.header('Cookie'), SESSION_COOKIE);
+    if (token) {
+      await c.env.DB.prepare('DELETE FROM sessions WHERE user_id = ?1 AND token_hash != ?2')
+        .bind(id, await sha256Hex(token)).run();
+    }
+  } else {
+    await deleteUserSessions(c.env.DB, id);
+  }
   return c.json({ password }); // dipaparkan sekali sahaja
 });
 
@@ -425,10 +450,19 @@ api.post('/users/:id/rotate-qr', adminOnly, async (c) => {
   const id = c.req.param('id');
   const target = await c.env.DB.prepare('SELECT id FROM users WHERE id = ?1 AND archived = 0').bind(id).first();
   if (!target) return jsonError('Pengguna tidak dijumpai', 404);
-  const qrCode = genId('USR');
+  const qrCode = genId('USR', 12); // 60 bit entropi, sama seperti penciptaan pengguna
   const r = await c.env.DB.prepare('UPDATE users SET qr_token_hash = ?2 WHERE id = ?1').bind(id, await sha256Hex(qrCode)).run();
   if (!r.success) return jsonError('Gagal menukar kod QR', 500);
   return c.json({ qr_code: qrCode }); // kod lama lupus - cetak yang baharu
+});
+
+api.post('/users/:id/restore', adminOnly, async (c) => {
+  const id = c.req.param('id');
+  const target = await c.env.DB.prepare('SELECT id FROM users WHERE id = ?1 AND archived = 1').bind(id).first();
+  if (!target) return jsonError('Pengguna tidak dijumpai atau sudah aktif', 404);
+  const r = await c.env.DB.prepare('UPDATE users SET archived = 0 WHERE id = ?1').bind(id).run();
+  if (!r.success) return jsonError('Gagal mengaktifkan semula pengguna', 500);
+  return c.json({ ok: true });
 });
 
 api.delete('/users/:id', adminOnly, async (c) => {
@@ -675,7 +709,10 @@ api.post('/purchases', adminOnly, async (c) => {
   const unit_cost = num(b.unit_cost);
   if (!item_id) return jsonError('Item diperlukan');
   if (qty <= 0) return jsonError('Kuantiti mesti melebihi sifar');
+  if (qty > MAX_QTY) return jsonError('Kuantiti terlalu besar (maks 1,000,000)');
   if (unit_cost <= 0) return jsonError('Kos seunit mesti lebih daripada sifar');
+  const date = recordDate(b.date);
+  if (!date) return jsonError('Tarikh mesti format YYYY-MM-DD yang sah');
 
   const item = await c.env.DB.prepare('SELECT id FROM items WHERE id = ?1 AND archived = 0').bind(item_id).first();
   if (!item) return jsonError('Item tidak dijumpai', 404);
@@ -685,7 +722,7 @@ api.post('/purchases', adminOnly, async (c) => {
     c.env.DB.prepare(
       `INSERT INTO purchases (id, item_id, qty, unit_cost, date, note, created_at)
        VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)`
-    ).bind(id, item_id, qty, unit_cost, str(b.date) || today(), str(b.note), new Date().toISOString()),
+    ).bind(id, item_id, qty, unit_cost, date, str(b.note), new Date().toISOString()),
     // Kos seunit item dikemas kini mengikut pembelian terkini
     c.env.DB.prepare('UPDATE items SET unit_cost = ?2 WHERE id = ?1').bind(item_id, unit_cost),
   ]);
@@ -721,6 +758,9 @@ api.post('/usages', requireAuth, async (c) => {
   const qty = num(b.qty);
   if (!item_id) return jsonError('Item diperlukan');
   if (qty <= 0) return jsonError('Kuantiti mesti melebihi sifar');
+  if (qty > MAX_QTY) return jsonError('Kuantiti terlalu besar (maks 1,000,000)');
+  const date = recordDate(b.date);
+  if (!date) return jsonError('Tarikh mesti format YYYY-MM-DD yang sah');
   const method = str(b.method) === 'scan' ? 'scan' : 'manual';
 
   const item = await c.env.DB.prepare('SELECT id, unit, unit_cost FROM items WHERE id = ?1 AND archived = 0').bind(item_id).first<{ id: string; unit: string; unit_cost: number }>();
@@ -741,7 +781,7 @@ api.post('/usages', requireAuth, async (c) => {
   await c.env.DB.prepare(
     `INSERT INTO usages (id, item_id, qty, unit_cost, date, method, note, created_at, recorded_by)
      VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)`
-  ).bind(id, item_id, qty, item.unit_cost, str(b.date) || today(), method, str(b.note), new Date().toISOString(), user.id).run();
+  ).bind(id, item_id, qty, item.unit_cost, date, method, str(b.note), new Date().toISOString(), user.id).run();
   return c.json({ id }, 201);
 });
 
@@ -759,6 +799,9 @@ api.post('/adjustments', adminOnly, async (c) => {
   const delta = num(b.delta);
   if (!item_id) return jsonError('Item diperlukan');
   if (delta === 0) return jsonError('Nilai pelarasan tidak boleh sifar');
+  if (Math.abs(delta) > MAX_QTY) return jsonError('Nilai pelarasan terlalu besar (maks 1,000,000)');
+  const date = recordDate(b.date);
+  if (!date) return jsonError('Tarikh mesti format YYYY-MM-DD yang sah');
 
   const item = await c.env.DB.prepare('SELECT id, unit FROM items WHERE id = ?1 AND archived = 0').bind(item_id).first<{ id: string; unit: string }>();
   if (!item) return jsonError('Item tidak dijumpai', 404);
@@ -778,7 +821,7 @@ api.post('/adjustments', adminOnly, async (c) => {
   await c.env.DB.prepare(
     `INSERT INTO adjustments (id, item_id, delta, date, reason, created_at)
      VALUES (?1, ?2, ?3, ?4, ?5, ?6)`
-  ).bind(id, item_id, delta, str(b.date) || today(), str(b.reason), new Date().toISOString()).run();
+  ).bind(id, item_id, delta, date, str(b.reason), new Date().toISOString()).run();
   return c.json({ id }, 201);
 });
 
@@ -816,10 +859,10 @@ api.get('/reports', adminOnly, async (c) => {
     stockByItem(c.env.DB),
     usage30ByItem(c.env.DB),
     c.env.DB.prepare(
-      `SELECT u2.full_name AS user_name, COUNT(*) AS count, SUM(u.qty) AS qty, SUM(u.qty * u.unit_cost) AS cost
+      `SELECT u2.full_name AS user_name, u.recorded_by AS user_id, COUNT(*) AS count, SUM(u.qty) AS qty, SUM(u.qty * u.unit_cost) AS cost
        FROM usages u JOIN items i ON i.id = u.item_id LEFT JOIN users u2 ON u2.id = u.recorded_by
        WHERE u.date >= ?1 GROUP BY u.recorded_by ORDER BY cost DESC`
-    ).bind(since30).all<{ user_name: string | null; count: number; qty: number; cost: number }>(),
+    ).bind(since30).all<{ user_name: string | null; user_id: string | null; count: number; qty: number; cost: number }>(),
     c.env.DB.prepare(
       `SELECT a.id, a.date, a.reason, a.delta, i.name AS item_name, i.unit, i.unit_cost
        FROM adjustments a JOIN items i ON i.id = a.item_id
@@ -882,6 +925,7 @@ api.get('/reports', adminOnly, async (c) => {
     top_usage: (topRows.results ?? []).map((r) => ({ ...r, source: (r.source === 'franchisor' ? 'franchisor' : 'local') as Source })),
     items,
     staff_usage: (staffRows.results ?? []).map((r) => ({
+      user_id: r.user_id,
       user_name: r.user_name,
       count: num(r.count),
       qty: num(r.qty),

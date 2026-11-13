@@ -121,16 +121,19 @@ Selepas akaun admin wujud, persediaan ditutup secara automatik.
    npx wrangler d1 create saigon-inventory
    ```
 2. **Kemas kini `wrangler.jsonc`** — gantikan `REPLACE_WITH_YOUR_DATABASE_ID` dengan ID tersebut.
-3. **Buat jadual + (pilihan) data contoh** pada pangkalan data sebenar:
+3. **Buat/naik taraf jadual + (pilihan) data contoh** pada pangkalan data sebenar:
    ```bash
-   npm run db:migrate:remote
-   npm run db:seed:remote       # pilihan — data contoh (seed/sample.sql)
+   npm run db:migrate:remote    # jalankan semua migrasi berjejak di migrations/
+   npm run db:seed:remote       # pilihan - data contoh (seed/sample.sql)
    ```
+   Skrip `db:migrate:*` menggunakan `wrangler d1 migrations apply`, jadi semua fail migrasi
+   (termasuk `0002_users.sql` dan `0003_usage_cost.sql`) dijalankan mengikut urutan.
 4. **Deploy**:
    ```bash
    npm run deploy
    ```
-   Aplikasi akan hidup di `https://saigon-inventory.<subdomain-anda>.workers.dev` — HTTPS automatik,
+   `npm run deploy` membina aplikasi, menjalankan migrasi pada D1 produksi, kemudian deploy.
+   Aplikasi akan hidup di `https://saigon-inventory.<subdomain-anda>.workers.dev` - HTTPS automatik,
    jadi pengimbasan kamera berfungsi terus di telefon.
 
 ### Deploy automatik dari GitHub (pilihan)
@@ -168,7 +171,7 @@ wrangler.jsonc        # konfigurasi Workers + D1
 - **Sejarah penuh** — setiap pergerakan direkod dengan tarikh, kaedah (imbas/manual) dan nota;
   pembelian boleh dibatalkan untuk membetulkan kesilapan.
 - **Pelarasan berasingan** — kiraan fizikal tidak dicampur dengan stok masuk/keluar.
-- **Sasaran sentuh ≥ 44px**, angka tabular (`tabular-nums`), tiada anjakan susun atur — sesuai
-  digunakan sambil berdiri di dapur.
+- **Sasaran sentuh 36-44px** (butang utama lebih besar), angka tabular (`tabular-nums`), tiada
+  anjakan susun atur - sesuai digunakan sambil berdiri di dapur.
 - **Kod QR statik** — kandungan kod hanyalah kod item yang kekal, jadi label dicetak tidak perlu
   dicetak semula walaupun nama/harga item berubah.

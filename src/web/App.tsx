@@ -192,6 +192,16 @@ export default function App() {
   }
   useEffect(() => { void loadMe(); }, []);
 
+  // Sesi dibatalkan/dilumpuhkan di tempat lain: kembali ke skrin log masuk
+  useEffect(() => {
+    const onUnauth = () => {
+      localStorage.removeItem('me');
+      setMe({ user: null, needs_setup: false });
+    };
+    window.addEventListener('sg:unauthorized', onUnauth);
+    return () => window.removeEventListener('sg:unauthorized', onUnauth);
+  }, []);
+
   function handleLogin(u: User) {
     localStorage.setItem('me', JSON.stringify(u));
     setMe({ user: u, needs_setup: false });
@@ -247,7 +257,13 @@ export default function App() {
   if (base === '/label') {
     page = admin ? <LabelSheet /> : <Denied />;
   } else if (labelMatch) {
-    page = admin ? <Labels itemId={decodeURIComponent(labelMatch[1])} /> : <Denied />;
+    let itemId: string | null = null;
+    try {
+      itemId = decodeURIComponent(labelMatch[1]);
+    } catch {
+      itemId = null; // peratusan tidak sah dalam URL
+    }
+    page = !admin ? <Denied /> : itemId ? <Labels itemId={itemId} /> : <p className="text-sm text-bark-700/60">Pautan label tidak sah.</p>;
   } else {
     switch (base) {
       case '/inventori':

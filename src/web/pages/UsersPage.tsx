@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { KeyRound, Plus, Printer, QrCode, ShieldCheck, UserRound, UserRoundPen, UserRoundX } from 'lucide-react';
+import { KeyRound, Eye, EyeOff, Plus, Printer, QrCode, ShieldCheck, UserRound, UserRoundCheck, UserRoundPen, UserRoundX } from 'lucide-react';
 import { api, useApi } from '../api';
 import { tarikh } from '../format';
 import { Badge, Button, Card, EmptyState, Field, inputCls, Modal, Spinner, toast } from '../ui';
@@ -21,6 +21,7 @@ function AddUserModal({ open, onClose, onCreated }: { open: boolean; onClose: ()
   const [position, setPosition] = useState('');
   const [role, setRole] = useState<'staff' | 'admin'>('staff');
   const [password, setPassword] = useState('');
+  const [showPw, setShowPw] = useState(false);
   const [saving, setSaving] = useState(false);
 
   async function submit() {
@@ -66,7 +67,17 @@ function AddUserModal({ open, onClose, onCreated }: { open: boolean; onClose: ()
           </div>
         </Field>
         <Field label="Kata Laluan Awal" hint="Sekurang-kurangnya 8 aksara, boleh ditetapkan semula kemudian">
-          <input className={inputCls} type="text" value={password} onChange={(e) => setPassword(e.target.value)} />
+          <div className="relative">
+            <input className={`${inputCls} !pr-11`} type={showPw ? 'text' : 'password'} value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" />
+            <button
+              type="button"
+              onClick={() => setShowPw((v) => !v)}
+              className="absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center text-bark-700/60 hover:text-bark-900"
+              aria-label={showPw ? 'Sembunyikan kata laluan' : 'Tunjuk kata laluan'}
+            >
+              {showPw ? <EyeOff size={17} /> : <Eye size={17} />}
+            </button>
+          </div>
         </Field>
         <div className="flex gap-3">
           <Button variant="secondary" full onClick={onClose}>Batal</Button>
@@ -168,7 +179,7 @@ export default function UsersPage() {
     try {
       const res = await api.post<{ password: string }>(`/api/users/${u.id}/reset-password`, {});
       setNewPassword(res.password);
-      toast('Kata laluan ditetapkan semula. Sesi lama dilumpuhkan', 'success');
+      toast('Kata laluan ditetapkan semula. Sesi lain dilumpuhkan', 'success');
     } catch (e) {
       toast(e instanceof Error ? e.message : 'Ralat', 'error');
       setPwModal(null);
@@ -188,6 +199,16 @@ export default function UsersPage() {
     try {
       await api.del(`/api/users/${u.id}`);
       toast(`${u.full_name} dilumpuhkan`, 'success');
+      reload();
+    } catch (e) {
+      toast(e instanceof Error ? e.message : 'Ralat', 'error');
+    }
+  }
+
+  async function restore(u: User) {
+    try {
+      await api.post(`/api/users/${u.id}/restore`, {});
+      toast(`${u.full_name} diaktifkan semula`, 'success');
       reload();
     } catch (e) {
       toast(e instanceof Error ? e.message : 'Ralat', 'error');
@@ -227,7 +248,13 @@ export default function UsersPage() {
                   @{u.username}{u.position ? ` · ${u.position}` : ''} · dicipta {tarikh(u.created_at)}
                 </span>
               </span>
-              {!u.archived && (
+              {u.archived ? (
+                <span className="flex shrink-0 flex-wrap gap-1.5">
+                  <button onClick={() => restore(u)} className="flex h-9 items-center gap-1.5 rounded-lg border border-cream-300 bg-white px-2.5 text-xs font-semibold text-leaf-700 hover:bg-cream-100" title="Aktifkan semula akaun">
+                    <UserRoundCheck size={15} /> Aktifkan
+                  </button>
+                </span>
+              ) : (
                 <span className="flex shrink-0 flex-wrap gap-1.5">
                   <button onClick={() => rotateQr(u)} className="flex h-9 items-center gap-1.5 rounded-lg border border-cream-300 bg-white px-2.5 text-xs font-semibold text-bark-700 hover:bg-cream-100" title="Jana kod QR baharu">
                     <QrCode size={15} /> Kod QR
@@ -292,7 +319,7 @@ export default function UsersPage() {
         {pwModal && (
           <div className="space-y-4">
             <p className="text-[15px] text-bark-800">
-              Jana kata laluan sementara untuk <b>{pwModal.full_name}</b>? Semua sesi log masuk sedia ada akan dilumpuhkan.
+              Jana kata laluan sementara untuk <b>{pwModal.full_name}</b>? Sesi lain akan dilumpuhkan selepas reset.
             </p>
             <div className="flex gap-3">
               <Button variant="secondary" full onClick={() => setPwModal(null)}>Batal</Button>

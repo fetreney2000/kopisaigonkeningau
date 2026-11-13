@@ -258,11 +258,16 @@ function ItemDetailModal({ itemId, onClose, onChanged }: { itemId: string; onClo
 
   async function del() {
     if (!data) return;
-    await api.del(`/api/items/${data.item.id}`);
-    toast('Item dipadam');
-    setConfirmDel(false);
-    onChanged();
-    onClose();
+    try {
+      await api.del(`/api/items/${data.item.id}`);
+      toast('Item dipadam');
+      setConfirmDel(false);
+      onChanged();
+      onClose();
+    } catch (e) {
+      toast(e instanceof Error ? e.message : 'Gagal memadam item', 'error');
+      setConfirmDel(false);
+    }
   }
 
   const history = useMemo(() => {

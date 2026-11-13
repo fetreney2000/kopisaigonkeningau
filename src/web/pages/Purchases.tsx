@@ -68,11 +68,16 @@ export default function Purchases() {
 
   async function del() {
     if (!delId) return;
-    await api.del(`/api/purchases/${delId}`);
-    toast('Pembelian dibatalkan');
-    setDelId(null);
-    list.reload();
-    summary.reload();
+    try {
+      await api.del(`/api/purchases/${delId}`);
+      toast('Pembelian dibatalkan');
+      setDelId(null);
+      list.reload();
+      summary.reload();
+    } catch (e) {
+      toast(e instanceof Error ? e.message : 'Gagal membatalkan pembelian', 'error');
+      setDelId(null);
+    }
   }
 
   return (

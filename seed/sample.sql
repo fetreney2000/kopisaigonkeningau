@@ -1,6 +1,6 @@
--- 0002_sample.sql - Data contoh (OPTIONAL). Jalankan hanya jika anda mahu lihat aplikasi
+-- seed/sample.sql - Data contoh (OPTIONAL). Jalankan hanya jika anda mahu lihat aplikasi
 -- dengan data contoh dahulu: wrangler d1 execute saigon-inventory --local --file=./seed/sample.sql
--- Nota: kod item mestiformat SG- + 8 aksara dari A-Z2-9 (tanpa I/O/0/1) supaya boleh diimbas.
+-- Nota: kod item mesti format SG- + 8 aksara dari A-Z2-9 (tanpa I/O/0/1) supaya boleh diimbas.
 
 INSERT INTO items (id, name, category, unit, source, unit_cost, min_qty, note, created_at) VALUES
   ('SG-ESPK2PQA', 'Biji Kopi Espresso', 'Kopi', 'kg', 'franchisor', 48.00, 3, 'Stok kopi utama', '2026-11-01T09:00:00Z'),

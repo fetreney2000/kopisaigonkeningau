@@ -116,7 +116,9 @@ export interface TopUsageRow {
 }
 
 export interface StaffUsageTotal {
-  /** Nama pengguna; null = rekod lama tanpa pengguna */
+  /** ID perekod; null = rekod lama tanpa pengguna */
+  user_id: string | null;
+  /** Nama pengguna; null = rekod lama atau akaun yang telah dipadam */
   user_name: string | null;
   count: number;
   qty: number;

@@ -93,5 +93,5 @@ export default function QRCodeImg({ value, size = 96, margin = 2, className = ''
       alive = false;
     };
   }, [value, size, margin]);
-  return <img src={url} width={size} height={size} alt={`Kod QR ${value}`} className={className} />;
+  return <img src={url || undefined} width={size} height={size} alt={`Kod QR ${value}`} className={className} />;
 }

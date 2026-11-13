@@ -12,6 +12,8 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
     // respons kosong
   }
   if (!res.ok) {
+    // Sesi tidak sah / dibatalkan: beritahu App supaya kembali ke skrin log masuk
+    if (res.status === 401) window.dispatchEvent(new Event('sg:unauthorized'));
     const msg = (body as { error?: string } | null)?.error ?? `Ralat ${res.status}`;
     throw new Error(msg);
   }
