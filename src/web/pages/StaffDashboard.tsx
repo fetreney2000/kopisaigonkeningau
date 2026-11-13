@@ -10,7 +10,7 @@ export default function StaffDashboard() {
   const { user } = useAuth();
   const { data, loading, error, reload } = useApi<StaffHome>('/api/staff/home');
 
-  const hour = new Date().getHours();
+  const hour = new Date(Date.now() + 8 * 3600_000).getUTCHours(); // waktu Kuala Lumpur
   const ucapan = hour < 12 ? 'Selamat pagi' : hour < 18 ? 'Selamat tengah hari' : 'Selamat petang';
 
   return (

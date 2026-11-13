@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { ClipboardCopy, Download, ListOrdered, PackageMinus, ReceiptText, SlidersHorizontal, TrendingUp, UserRound, Wallet } from 'lucide-react';
 import { useApi } from '../api';
-import { angka, bulanPendek, hariBerbaki, rm, rmShort, SOURCE_LABEL, tarikh } from '../format';
+import { angka, bulanPendek, hariBerbaki, hariIni, rm, rmShort, SOURCE_LABEL, tarikh } from '../format';
 import { SpendChart } from '../chart';
 import { Badge, Button, Card, EmptyState, ErrorState, SectionTitle, Segmented, Spinner, toast } from '../ui';
 import type { Reports } from '../../shared/types';
@@ -43,7 +43,7 @@ export default function ReportsPage() {
   function salinSenaraiPesanan() {
     const franchisor = reorder.filter((r) => r.it.source === 'franchisor');
     const local = reorder.filter((r) => r.it.source === 'local');
-    const lines: string[] = ['SENARAI PESANAN', new Date().toLocaleDateString('ms-MY'), ''];
+    const lines: string[] = ['SENARAI PESANAN', tarikh(hariIni()), ''];
     const blok = (tajuk: string, list: typeof reorder) => {
       if (list.length === 0) return;
       lines.push(tajuk);
@@ -105,7 +105,7 @@ export default function ReportsPage() {
     const blob = new Blob(['\uFEFF' + lines.join('\n')], { type: 'text/csv;charset=utf-8' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = `laporan-inventori-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.download = `laporan-inventori-${hariIni()}.csv`;
     a.click();
     toast('Fail CSV dieksport');
   }

@@ -200,8 +200,8 @@ export default function LabelSheet() {
           </div>
           <div className="mb-3 flex gap-2">
             <input
-              className="w-full rounded-xl border border-cream-300 bg-white px-3.5 py-2.5 text-[15px] placeholder:text-bark-700/35 focus:border-coffee-500 focus:outline-2 focus:outline-coffee-500/25"
-              placeholder="Cari item…"
+              className="w-full rounded-xl border border-cream-300 bg-white px-3.5 py-2.5 text-[15px] focus:border-coffee-500 focus:outline-2 focus:outline-coffee-500/25"
+              aria-label="Cari item"
               value={q}
               onChange={(e) => setQ(e.target.value)}
             />

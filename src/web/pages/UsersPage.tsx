@@ -41,13 +41,13 @@ function AddUserModal({ open, onClose, onCreated }: { open: boolean; onClose: ()
     <Modal open={open} onClose={onClose} title="Tambah Pengguna">
       <div className="space-y-4">
         <Field label="Nama Penuh">
-          <input className={inputCls} value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="cth. Siti Nurhaliza" />
+          <input className={inputCls} value={fullName} onChange={(e) => setFullName(e.target.value)} />
         </Field>
         <Field label="Nama Pengguna" hint="3–32 aksara: huruf kecil, nombor, titik, garis bawah atau sempang">
-          <input className={inputCls} value={username} onChange={(e) => setUsername(e.target.value)} autoCapitalize="none" placeholder="cth. siti" />
+          <input className={inputCls} value={username} onChange={(e) => setUsername(e.target.value)} autoCapitalize="none" />
         </Field>
         <Field label="Jawatan">
-          <input className={inputCls} value={position} onChange={(e) => setPosition(e.target.value)} placeholder="cth. Barista" />
+          <input className={inputCls} value={position} onChange={(e) => setPosition(e.target.value)} />
         </Field>
         <Field label="Peranan">
           <div className="flex gap-2">
@@ -66,7 +66,7 @@ function AddUserModal({ open, onClose, onCreated }: { open: boolean; onClose: ()
           </div>
         </Field>
         <Field label="Kata Laluan Awal" hint="Sekurang-kurangnya 8 aksara — boleh ditetapkan semula kemudian">
-          <input className={inputCls} type="text" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="cth. kopi-saigon-2026" />
+          <input className={inputCls} type="text" value={password} onChange={(e) => setPassword(e.target.value)} />
         </Field>
         <div className="flex gap-3">
           <Button variant="secondary" full onClick={onClose}>Batal</Button>

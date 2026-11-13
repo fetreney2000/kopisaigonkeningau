@@ -3,7 +3,7 @@ import {
   ChevronRight, PackageMinus, PackagePlus, Pencil, Plus, Printer, QrCode, Search, SlidersHorizontal, Trash2, Wallet,
 } from 'lucide-react';
 import { api, useApi } from '../api';
-import { angka, hariBerbaki, hariIni, labelStatus, rm, SOURCE_LABEL, STATUS_LABEL, tarikh } from '../format';
+import { angka, hariBerbaki, hariDari, hariIni, labelStatus, rm, SOURCE_LABEL, STATUS_LABEL, tarikh } from '../format';
 import {
   Badge, Button, Card, ConfirmModal, EmptyState, ErrorState, Field, inputCls, Modal, Segmented, SectionTitle, Spinner, toast,
 } from '../ui';
@@ -64,14 +64,14 @@ function ItemFormModal({ open, item, onClose, onSaved }: { open: boolean; item: 
     <Modal open={open} onClose={onClose} title={item ? 'Sunting Item' : 'Tambah Item'}>
       <div className="space-y-4">
         <Field label="Nama Item *">
-          <input className={inputCls} value={vals.name} onChange={set('name')} placeholder="cth. Biji Kopi Espresso" autoFocus />
+          <input className={inputCls} value={vals.name} onChange={set('name')} autoFocus />
         </Field>
         <div className="grid grid-cols-2 gap-3">
           <Field label="Kategori">
-            <input className={inputCls} value={vals.category} onChange={set('category')} placeholder="cth. Kopi" />
+            <input className={inputCls} value={vals.category} onChange={set('category')} />
           </Field>
           <Field label="Unit">
-            <input className={inputCls} value={vals.unit} onChange={set('unit')} list="unit-list" placeholder="cth. kg" />
+            <input className={inputCls} value={vals.unit} onChange={set('unit')} list="unit-list" />
             <datalist id="unit-list">
               <option value="kg" /><option value="g" /><option value="L" /><option value="ml" />
               <option value="biji" /><option value="bungkus" /><option value="kotak" /><option value="tin" />
@@ -92,14 +92,14 @@ function ItemFormModal({ open, item, onClose, onSaved }: { open: boolean; item: 
         </Field>
         <div className="grid grid-cols-2 gap-3">
           <Field label="Kos Seunit (RM)">
-            <input className={`${inputCls} num`} type="number" inputMode="decimal" step="0.01" min="0" value={vals.unit_cost} onChange={set('unit_cost')} placeholder="0.00" />
+            <input className={`${inputCls} num`} type="number" inputMode="decimal" step="0.01" min="0" value={vals.unit_cost} onChange={set('unit_cost')} />
           </Field>
           <Field label="Stok Minimum" hint="Amaran dikeluarkan apabila stok sampai tahap ini">
-            <input className={`${inputCls} num`} type="number" inputMode="decimal" step="any" min="0" value={vals.min_qty} onChange={set('min_qty')} placeholder="0" />
+            <input className={`${inputCls} num`} type="number" inputMode="decimal" step="any" min="0" value={vals.min_qty} onChange={set('min_qty')} />
           </Field>
         </div>
         <Field label="Nota">
-          <textarea className={`${inputCls} min-h-20 resize-none`} value={vals.note} onChange={set('note')} placeholder="cth. nama pembekal, catatan simpanan..." />
+          <textarea className={`${inputCls} min-h-20 resize-none`} value={vals.note} onChange={set('note')} />
         </Field>
         {err && <p className="text-sm font-medium text-berry-600">{err}</p>}
         <div className="flex gap-3 pt-1">
@@ -180,7 +180,7 @@ function MovementModal({ kind, item, onClose, onSaved }: {
 
         <div className="grid grid-cols-2 gap-3">
           <Field label={qtyLabel}>
-            <input className={`${inputCls} num`} type="number" inputMode="decimal" step="any" min="0" value={qty} onChange={(e) => setQty(e.target.value)} placeholder="0" autoFocus />
+            <input className={`${inputCls} num`} type="number" inputMode="decimal" step="any" min="0" value={qty} onChange={(e) => setQty(e.target.value)} autoFocus />
           </Field>
           {kind === 'purchase' && (
             <Field label="Kos Seunit (RM)">
@@ -200,7 +200,7 @@ function MovementModal({ kind, item, onClose, onSaved }: {
 
         {kind === 'adjust' && (
           <Field label="Sebab Pelarasan" hint="cth. kiraan fizikal, rosak, hilang">
-            <input className={inputCls} value={reason} onChange={(e) => setReason(e.target.value)} list="reason-list" placeholder="cth. kiraan fizikal" />
+            <input className={inputCls} value={reason} onChange={(e) => setReason(e.target.value)} list="reason-list" />
             <datalist id="reason-list">
               <option value="Kiraan fizikal" /><option value="Rosak" /><option value="Hilang" /><option value="Pembetulan" />
             </datalist>
@@ -209,7 +209,7 @@ function MovementModal({ kind, item, onClose, onSaved }: {
 
         {kind !== 'adjust' && (
           <Field label="Nota">
-            <input className={inputCls} value={note} onChange={(e) => setNote(e.target.value)} placeholder="pilihan" />
+            <input className={inputCls} value={note} onChange={(e) => setNote(e.target.value)} />
           </Field>
         )}
 
@@ -273,7 +273,7 @@ function ItemDetailModal({ itemId, onClose, onChanged }: { itemId: string; onClo
   // Statistik lanjutan dikira daripada sejarah penuh (100 rekod terkini setiap jenis)
   const stats = useMemo(() => {
     if (!data) return null;
-    const since30 = new Date(Date.now() - 30 * 86400_000).toISOString().slice(0, 10);
+    const since30 = hariDari(-30);
     const uc = data.item.unit_cost;
 
     let buyQty = 0, buyRm = 0, buyN = 0, buy30 = 0, lastBuy: string | null = null;
@@ -564,7 +564,6 @@ export default function Inventory() {
           <Search size={17} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-bark-700/40" />
           <input
             className={`${inputCls} !pl-10`}
-            placeholder="Cari item atau kategori…"
             value={q}
             onChange={(e) => setQ(e.target.value)}
             aria-label="Cari item"

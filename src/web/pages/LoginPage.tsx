@@ -44,13 +44,13 @@ function SetupForm({ onDone }: { onDone: (u: User) => void }) {
   return (
     <div className="space-y-4">
       <Field label="Nama Penuh">
-        <input className={inputCls} value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="cth. Ahmad Faizal" autoFocus />
+        <input className={inputCls} value={fullName} onChange={(e) => setFullName(e.target.value)} autoFocus />
       </Field>
       <Field label="Nama Pengguna" hint="3–32 aksara: huruf kecil, nombor, titik, garis bawah atau sempang">
-        <input className={inputCls} value={username} onChange={(e) => setUsername(e.target.value)} placeholder="cth. faizal" autoCapitalize="none" />
+        <input className={inputCls} value={username} onChange={(e) => setUsername(e.target.value)} autoCapitalize="none" />
       </Field>
       <Field label="Jawatan">
-        <input className={inputCls} value={position} onChange={(e) => setPosition(e.target.value)} placeholder="cth. Pemilik" />
+        <input className={inputCls} value={position} onChange={(e) => setPosition(e.target.value)} />
       </Field>
       <Field label="Kata Laluan" hint="Sekurang-kurangnya 8 aksara">
         <input className={inputCls} type="password" value={password} onChange={(e) => setPassword(e.target.value)} />

@@ -105,10 +105,10 @@ export default function Purchases() {
           />
           <div className="grid grid-cols-2 gap-3">
             <Field label="Kuantiti *">
-              <input className={`${inputCls} num`} type="number" inputMode="decimal" step="any" min="0" value={qty} onChange={(e) => setQty(e.target.value)} placeholder="0" />
+              <input className={`${inputCls} num`} type="number" inputMode="decimal" step="any" min="0" value={qty} onChange={(e) => setQty(e.target.value)} />
             </Field>
             <Field label="Kos Seunit (RM) *">
-              <input className={`${inputCls} num`} type="number" inputMode="decimal" step="0.01" min="0" value={cost} onChange={(e) => setCost(e.target.value)} placeholder="0.00" />
+              <input className={`${inputCls} num`} type="number" inputMode="decimal" step="0.01" min="0" value={cost} onChange={(e) => setCost(e.target.value)} />
             </Field>
           </div>
           <div className="grid grid-cols-2 gap-3">
@@ -122,7 +122,7 @@ export default function Purchases() {
             </Field>
           </div>
           <Field label="Nota">
-            <input className={inputCls} value={note} onChange={(e) => setNote(e.target.value)} placeholder="cth. resit #1023, nama kedai…" />
+            <input className={inputCls} value={note} onChange={(e) => setNote(e.target.value)} />
           </Field>
           {err && <p className="text-sm font-medium text-berry-600">{err}</p>}
           <Button full onClick={save} disabled={saving}>

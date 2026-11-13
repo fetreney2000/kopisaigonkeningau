@@ -1,4 +1,6 @@
-// Pemformatan ikut ms-MY — Ringgit Malaysia (RM)
+// Pemformatan ikut ms-MY — Ringgit Malaysia (RM), waktu Kuala Lumpur (UTC+8)
+
+const KL_OFFSET_MS = 8 * 3600_000;
 
 const moneyFmt = new Intl.NumberFormat('ms-MY', {
   style: 'currency',
@@ -16,7 +18,6 @@ const moneyCompactFmt = new Intl.NumberFormat('ms-MY', {
 
 const numFmt = new Intl.NumberFormat('ms-MY', { maximumFractionDigits: 2 });
 
-const dateFmt = new Intl.DateTimeFormat('ms-MY', { day: 'numeric', month: 'short', year: 'numeric' });
 const monthFmt = new Intl.DateTimeFormat('ms-MY', { month: 'long', year: 'numeric' });
 
 export function rm(v: number): string {
@@ -37,10 +38,12 @@ export function rmPlain(v: number): string {
   return 'RM' + numFmt.format(Math.round((v || 0) * 100) / 100);
 }
 
+/** Tarikh format Malaysia dd-mm-yyyy; terima 'YYYY-MM-DD' atau ISO penuh (dilaraskan ke waktu KL) */
 export function tarikh(iso: string): string {
   if (!iso) return '';
-  const d = new Date(iso.length === 10 ? iso + 'T00:00:00' : iso);
-  return dateFmt.format(d);
+  const day = iso.length === 10 ? iso : new Date(new Date(iso).getTime() + KL_OFFSET_MS).toISOString().slice(0, 10);
+  const [y, m, d] = day.split('-');
+  return `${d}-${m}-${y}`;
 }
 
 export function bulan(ym: string): string {
@@ -48,17 +51,13 @@ export function bulan(ym: string): string {
   return monthFmt.format(d);
 }
 
-/** Tarikh hari ini ikut zon masa tempatan, format YYYY-MM-DD */
+/** Tarikh hari ini ikut waktu Kuala Lumpur (UTC+8), format YYYY-MM-DD */
 export function hariIni(): string {
-  const d = new Date();
-  const off = d.getTimezoneOffset();
-  return new Date(d.getTime() - off * 60_000).toISOString().slice(0, 10);
+  return new Date(Date.now() + KL_OFFSET_MS).toISOString().slice(0, 10);
 }
 
 export function hariDari(offsetDays: number): string {
-  const d = new Date();
-  const off = d.getTimezoneOffset();
-  return new Date(d.getTime() - off * 60_000 + offsetDays * 86400_000).toISOString().slice(0, 10);
+  return new Date(Date.now() + KL_OFFSET_MS + offsetDays * 86400_000).toISOString().slice(0, 10);
 }
 
 // ------------------------------------------------------------------ status stok

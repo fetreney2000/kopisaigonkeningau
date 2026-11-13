@@ -25,8 +25,15 @@ function genId(prefix: string, len = 8): string {
   return `${prefix}-${out}`;
 }
 
+// Zon masa Malaysia (MYT, UTC+8, tiada DST) — semua tarikh direkod ikut waktu Kuala Lumpur
+const KL_OFFSET_MS = 8 * 3600_000;
+
+function klNow(): Date {
+  return new Date(Date.now() + KL_OFFSET_MS);
+}
+
 function today(): string {
-  return new Date().toISOString().slice(0, 10);
+  return klNow().toISOString().slice(0, 10);
 }
 
 function num(v: unknown, fallback = 0): number {
@@ -70,7 +77,7 @@ async function stockByItem(db: D1Database): Promise<Map<string, number>> {
 }
 
 async function usage30ByItem(db: D1Database): Promise<Map<string, number>> {
-  const since = new Date(Date.now() - 30 * 86400_000).toISOString().slice(0, 10);
+  const since = new Date(Date.now() + KL_OFFSET_MS - 30 * 86400_000).toISOString().slice(0, 10);
   const rows = await db
     .prepare('SELECT item_id, SUM(qty) AS qty FROM usages WHERE date >= ?1 GROUP BY item_id')
     .bind(since)
@@ -424,7 +431,7 @@ api.get('/staff/home', requireAuth, async (c) => {
 // -- Ringkasan papan pemuka (admin sahaja — mengandungi nilai perbelanjaan) ---
 api.get('/summary', adminOnly, async (c) => {
   const db = c.env.DB;
-  const now = new Date();
+  const now = klNow();
   const ym = now.toISOString().slice(0, 7);
 
   const [itemRows, stockMap, usage30Map, spendRows, usageRows, recentRows] = await Promise.all([
@@ -709,10 +716,10 @@ api.delete('/adjustments/:id', adminOnly, async (c) => {
 // -- Laporan (admin sahaja) ----------------------------------------------------
 api.get('/reports', adminOnly, async (c) => {
   const months = Math.min(24, Math.max(1, num(c.req.query('months'), 6)));
-  const start = new Date();
+  const start = klNow();
   start.setUTCMonth(start.getUTCMonth() - (months - 1));
   const startYm = start.toISOString().slice(0, 7);
-  const since30 = new Date(Date.now() - 30 * 86400_000).toISOString().slice(0, 10);
+  const since30 = new Date(Date.now() + KL_OFFSET_MS - 30 * 86400_000).toISOString().slice(0, 10);
 
   const [spendRows, usageRows, topRows, itemRows, stockMap, usage30Map, staffRows, adjRows, catSpendRows, catUsageRows] = await Promise.all([
     c.env.DB.prepare(

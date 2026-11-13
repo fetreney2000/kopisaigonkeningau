@@ -27,7 +27,7 @@ export function ItemPicker({
     <Modal open={open} onClose={onClose} title="Pilih Item">
       <div className="relative mb-3">
         <Search size={17} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-bark-700/40" />
-        <input className={`${inputCls} !pl-10`} placeholder="Cari item…" value={q} onChange={(e) => setQ(e.target.value)} autoFocus />
+        <input className={`${inputCls} !pl-10`} aria-label="Cari item" value={q} onChange={(e) => setQ(e.target.value)} autoFocus />
       </div>
       <div className="max-h-[55vh] overflow-y-auto rounded-xl border border-cream-200">
         {items.length === 0 && <p className="py-6 text-center text-sm text-bark-700/50">Tiada item dijumpai.</p>}

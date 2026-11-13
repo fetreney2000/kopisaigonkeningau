@@ -69,7 +69,7 @@ export function Field({ label, children, hint }: { label: string; children: Reac
 }
 
 export const inputCls =
-  'w-full rounded-xl border border-cream-300 bg-white px-3.5 py-2.5 text-[15px] text-bark-900 placeholder:text-bark-700/35 focus:border-coffee-500 focus:outline-2 focus:outline-coffee-500/25';
+  'w-full rounded-xl border border-cream-300 bg-white px-3.5 py-2.5 text-[15px] text-bark-900 focus:border-coffee-500 focus:outline-2 focus:outline-coffee-500/25';
 
 export function Segmented<T extends string>({
   value, onChange, options,

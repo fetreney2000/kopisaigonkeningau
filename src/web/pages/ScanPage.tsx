@@ -63,7 +63,7 @@ function ConfirmCard({ item, method, onDone, onCancel }: {
       </Field>
 
       <Field label="Nota">
-        <input className={inputCls} value={note} onChange={(e) => setNote(e.target.value)} placeholder="pilihan" />
+        <input className={inputCls} value={note} onChange={(e) => setNote(e.target.value)} />
       </Field>
 
       <div className="flex gap-3">

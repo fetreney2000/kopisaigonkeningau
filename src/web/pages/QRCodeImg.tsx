@@ -24,16 +24,6 @@ function loadLogo(): Promise<HTMLImageElement> {
   return logoPromise;
 }
 
-function roundRectPath(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
-  ctx.beginPath();
-  ctx.moveTo(x + r, y);
-  ctx.arcTo(x + w, y, x + w, y + h, r);
-  ctx.arcTo(x + w, y + h, x, y + h, r);
-  ctx.arcTo(x, y + h, x, y, r);
-  ctx.arcTo(x, y, x + w, y, r);
-  ctx.closePath();
-}
-
 // ------------------------------------------------------------------ jana QR berlogo
 
 const composeCache = new Map<string, string>();
@@ -66,19 +56,20 @@ export async function getQrDataUrl(value: string, size: number, margin = 2): Pro
     if (ctx) {
       ctx.drawImage(qr, 0, 0);
 
-      // Kotak putih sudut bulat di tengah, logo coklat di dalamnya
+      // Bulatan putih di tengah, logo coklat di dalamnya
       const box = Math.round(qr.width * 0.26);
-      const bx = Math.round((qr.width - box) / 2);
+      const c = qr.width / 2;
       ctx.fillStyle = LIGHT;
-      roundRectPath(ctx, bx, bx, box, box, Math.round(box * 0.18));
+      ctx.beginPath();
+      ctx.arc(c, c, box / 2, 0, Math.PI * 2);
       ctx.fill();
 
-      const pad = Math.round(box * 0.14);
+      const pad = Math.round(box * 0.16);
       const avail = box - pad * 2;
       const scale = Math.min(avail / logo.width, avail / logo.height);
       const lw = logo.width * scale;
       const lh = logo.height * scale;
-      ctx.drawImage(logo, bx + (box - lw) / 2, bx + (box - lh) / 2, lw, lh);
+      ctx.drawImage(logo, c - lw / 2, c - lh / 2, lw, lh);
 
       url = canvas.toDataURL('image/png');
     }
