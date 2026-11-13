@@ -35,6 +35,9 @@ export interface Purchase {
   date: string;
   note: string;
   created_at: string;
+  recorded_by?: string | null;
+  /** Nama perekod (null = rekod lama sebelum jejak audit) */
+  recorded_by_name?: string | null;
   item_name?: string;
   item_unit?: string;
   item_source?: Source;
@@ -49,6 +52,9 @@ export interface Usage {
   method: 'scan' | 'manual';
   note: string;
   created_at: string;
+  recorded_by?: string | null;
+  /** Nama perekod (null = rekod lama sebelum jejak audit) */
+  recorded_by_name?: string | null;
   item_name?: string;
   item_unit?: string;
   item_source?: Source;
@@ -61,6 +67,9 @@ export interface Adjustment {
   date: string;
   reason: string;
   created_at: string;
+  recorded_by?: string | null;
+  /** Nama perekod (null = rekod lama sebelum jejak audit) */
+  recorded_by_name?: string | null;
   item_name?: string;
   item_unit?: string;
   item_source?: Source;

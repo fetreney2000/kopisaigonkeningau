@@ -701,9 +701,21 @@ api.get('/items/:id', adminOnly, async (c) => {
   const [stockMap, usage30Map, purchases, usages, adjustments] = await Promise.all([
     stockByItem(c.env.DB),
     usage30ByItem(c.env.DB),
-    c.env.DB.prepare('SELECT * FROM purchases WHERE item_id = ?1 ORDER BY date DESC, created_at DESC LIMIT 100').bind(id).all<Purchase>(),
-    c.env.DB.prepare('SELECT * FROM usages WHERE item_id = ?1 ORDER BY date DESC, created_at DESC LIMIT 100').bind(id).all<Usage>(),
-    c.env.DB.prepare('SELECT * FROM adjustments WHERE item_id = ?1 ORDER BY date DESC, created_at DESC LIMIT 100').bind(id).all<Adjustment>(),
+    c.env.DB.prepare(
+      `SELECT p.*, u.full_name AS recorded_by_name FROM purchases p
+       LEFT JOIN users u ON u.id = p.recorded_by
+       WHERE p.item_id = ?1 ORDER BY p.date DESC, p.created_at DESC LIMIT 100`
+    ).bind(id).all<Purchase>(),
+    c.env.DB.prepare(
+      `SELECT u.*, u2.full_name AS recorded_by_name FROM usages u
+       LEFT JOIN users u2 ON u2.id = u.recorded_by
+       WHERE u.item_id = ?1 ORDER BY u.date DESC, u.created_at DESC LIMIT 100`
+    ).bind(id).all<Usage>(),
+    c.env.DB.prepare(
+      `SELECT a.*, u.full_name AS recorded_by_name FROM adjustments a
+       LEFT JOIN users u ON u.id = a.recorded_by
+       WHERE a.item_id = ?1 ORDER BY a.date DESC, a.created_at DESC LIMIT 100`
+    ).bind(id).all<Adjustment>(),
   ]);
 
   return c.json({
@@ -726,6 +738,7 @@ api.get('/purchases', adminOnly, async (c) => {
 });
 
 api.post('/purchases', adminOnly, async (c) => {
+  const user = c.get('user')!;
   const b = await c.req.json().catch(() => null);
   if (!b) return jsonError('Borang tidak sah');
   const item_id = str(b.item_id);
@@ -744,9 +757,9 @@ api.post('/purchases', adminOnly, async (c) => {
   const id = genId('PC');
   const r = await c.env.DB.batch([
     c.env.DB.prepare(
-      `INSERT INTO purchases (id, item_id, qty, unit_cost, date, note, created_at)
-       VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)`
-    ).bind(id, item_id, qty, unit_cost, date, str(b.note), new Date().toISOString()),
+      `INSERT INTO purchases (id, item_id, qty, unit_cost, date, note, created_at, recorded_by)
+       VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)`
+    ).bind(id, item_id, qty, unit_cost, date, str(b.note), new Date().toISOString(), user.id),
     // Kos seunit item dikemas kini mengikut pembelian terkini
     c.env.DB.prepare('UPDATE items SET unit_cost = ?2 WHERE id = ?1').bind(item_id, unit_cost),
   ]);
@@ -817,6 +830,7 @@ api.delete('/usages/:id', adminOnly, async (c) => {
 
 // -- Pelarasan stok (admin sahaja) ---------------------------------------------
 api.post('/adjustments', adminOnly, async (c) => {
+  const user = c.get('user')!;
   const b = await c.req.json().catch(() => null);
   if (!b) return jsonError('Borang tidak sah');
   const item_id = str(b.item_id);
@@ -843,9 +857,9 @@ api.post('/adjustments', adminOnly, async (c) => {
 
   const id = genId('AD');
   await c.env.DB.prepare(
-    `INSERT INTO adjustments (id, item_id, delta, date, reason, created_at)
-     VALUES (?1, ?2, ?3, ?4, ?5, ?6)`
-  ).bind(id, item_id, delta, date, str(b.reason), new Date().toISOString()).run();
+    `INSERT INTO adjustments (id, item_id, delta, date, reason, created_at, recorded_by)
+     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)`
+  ).bind(id, item_id, delta, date, str(b.reason), new Date().toISOString(), user.id).run();
   return c.json({ id }, 201);
 });
 

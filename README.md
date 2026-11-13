@@ -173,8 +173,10 @@ wrangler.jsonc        # konfigurasi Workers + D1
 
 - **Pergerakan disahkan** — pengimbasan tidak mengurangkan stok secara automatik; pengguna sahkan
   kuantiti dahulu (elak rekod hantu).
-- **Sejarah penuh** — setiap pergerakan direkod dengan tarikh, kaedah (imbas/manual) dan nota;
-  pembelian boleh dibatalkan untuk membetulkan kesilapan.
+- **Sejarah penuh + jejak audit** - setiap pergerakan direkod dengan tarikh, kaedah (imbas/manual),
+  nota dan **siapa yang merekod** (stok masuk, stok keluar dan pelarasan). Nama perekod dipaparkan
+  dalam butiran item (Kad Stok dan Senarai); rekod lama sebelum ciri ini menunjukkan "Tidak direkod".
+  Pembelian boleh dibatalkan untuk membetulkan kesilapan.
 - **Pelarasan berasingan** — kiraan fizikal tidak dicampur dengan stok masuk/keluar.
 - **Sasaran sentuh 36-44px** (butang utama lebih besar), angka tabular (`tabular-nums`), tiada
   anjakan susun atur - sesuai digunakan sambil berdiri di dapur.

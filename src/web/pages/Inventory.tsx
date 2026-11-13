@@ -273,9 +273,10 @@ function ItemDetailModal({ itemId, onClose, onChanged }: { itemId: string; onClo
   const history = useMemo(() => {
     if (!data) return [];
     const rows: { kind: 'purchase' | 'usage' | 'adjust'; id: string; main: string; sub: string; right: string; neg: boolean; ts: number }[] = [];
-    for (const p of data.purchases) rows.push({ kind: 'purchase', id: p.id, main: 'Stok Masuk', sub: `${tarikh(p.date)}${p.note ? ` · ${p.note}` : ''}`, right: `+${angka(p.qty)}`, neg: false, ts: Date.parse(p.created_at) });
-    for (const u of data.usages) rows.push({ kind: 'usage', id: u.id, main: u.method === 'scan' ? 'Stok Keluar (imbas)' : 'Stok Keluar', sub: `${tarikh(u.date)}${u.note ? ` · ${u.note}` : ''}`, right: `−${angka(u.qty)}`, neg: true, ts: Date.parse(u.created_at) });
-    for (const a of data.adjustments) rows.push({ kind: 'adjust', id: a.id, main: 'Pelarasan', sub: `${tarikh(a.date)}${a.reason ? ` · ${a.reason}` : ''}`, right: `${a.delta > 0 ? '+' : '−'}${angka(Math.abs(a.delta))}`, neg: a.delta < 0, ts: Date.parse(a.created_at) });
+    const oleh = (n?: string | null) => ` · oleh ${n || 'Tidak direkod'}`;
+    for (const p of data.purchases) rows.push({ kind: 'purchase', id: p.id, main: 'Stok Masuk', sub: `${tarikh(p.date)}${p.note ? ` · ${p.note}` : ''}${oleh(p.recorded_by_name)}`, right: `+${angka(p.qty)}`, neg: false, ts: Date.parse(p.created_at) });
+    for (const u of data.usages) rows.push({ kind: 'usage', id: u.id, main: u.method === 'scan' ? 'Stok Keluar (imbas)' : 'Stok Keluar', sub: `${tarikh(u.date)}${u.note ? ` · ${u.note}` : ''}${oleh(u.recorded_by_name)}`, right: `−${angka(u.qty)}`, neg: true, ts: Date.parse(u.created_at) });
+    for (const a of data.adjustments) rows.push({ kind: 'adjust', id: a.id, main: 'Pelarasan', sub: `${tarikh(a.date)}${a.reason ? ` · ${a.reason}` : ''}${oleh(a.recorded_by_name)}`, right: `${a.delta > 0 ? '+' : '−'}${angka(Math.abs(a.delta))}`, neg: a.delta < 0, ts: Date.parse(a.created_at) });
     return rows.sort((x, y) => y.ts - x.ts).slice(0, 25);
   }, [data]);
 
@@ -283,11 +284,11 @@ function ItemDetailModal({ itemId, onClose, onChanged }: { itemId: string; onClo
   // jumlah pergerakan dalam rekod, supaya baki akhir tepat sama dengan stok semasa.
   const kad = useMemo(() => {
     if (!data) return [];
-    type Ev = { date: string; ts: number; desc: string; masuk: number; keluar: number };
+    type Ev = { date: string; ts: number; desc: string; oleh: string; masuk: number; keluar: number };
     const evs: Ev[] = [];
-    for (const p of data.purchases) evs.push({ date: p.date, ts: Date.parse(p.created_at), desc: `Stok Masuk${p.note ? `: ${p.note}` : ''}`, masuk: p.qty, keluar: 0 });
-    for (const u of data.usages) evs.push({ date: u.date, ts: Date.parse(u.created_at), desc: `Stok Keluar${u.method === 'scan' ? ' (imbas)' : ''}${u.note ? `: ${u.note}` : ''}`, masuk: 0, keluar: u.qty });
-    for (const a of data.adjustments) evs.push({ date: a.date, ts: Date.parse(a.created_at), desc: `Pelarasan${a.reason ? `: ${a.reason}` : ''}`, masuk: a.delta > 0 ? a.delta : 0, keluar: a.delta < 0 ? -a.delta : 0 });
+    for (const p of data.purchases) evs.push({ date: p.date, ts: Date.parse(p.created_at), desc: `Stok Masuk${p.note ? `: ${p.note}` : ''}`, oleh: p.recorded_by_name || '', masuk: p.qty, keluar: 0 });
+    for (const u of data.usages) evs.push({ date: u.date, ts: Date.parse(u.created_at), desc: `Stok Keluar${u.method === 'scan' ? ' (imbas)' : ''}${u.note ? `: ${u.note}` : ''}`, oleh: u.recorded_by_name || '', masuk: 0, keluar: u.qty });
+    for (const a of data.adjustments) evs.push({ date: a.date, ts: Date.parse(a.created_at), desc: `Pelarasan${a.reason ? `: ${a.reason}` : ''}`, oleh: a.recorded_by_name || '', masuk: a.delta > 0 ? a.delta : 0, keluar: a.delta < 0 ? -a.delta : 0 });
     evs.sort((x, y) => x.date.localeCompare(y.date) || x.ts - y.ts);
     const net = evs.reduce((s, e) => s + e.masuk - e.keluar, 0);
     let baki = data.item.stock - net;
@@ -525,11 +526,12 @@ function ItemDetailModal({ itemId, onClose, onChanged }: { itemId: string; onClo
                   <p className="py-4 text-center text-sm text-bark-700/50">Tiada rekod lagi.</p>
                 ) : (
                   <div className="overflow-x-auto">
-                    <table className="w-full min-w-[560px] border-collapse text-sm">
+                    <table className="w-full min-w-[680px] border-collapse text-sm">
                       <thead>
                         <tr className="bg-cream-200 text-[11px] uppercase tracking-wide text-bark-800">
                           <th className="border border-cream-300 px-3 py-2 text-left font-bold">Tarikh</th>
                           <th className="border border-cream-300 px-3 py-2 text-left font-bold">Butiran</th>
+                          <th className="border border-cream-300 px-3 py-2 text-left font-bold">Oleh</th>
                           <th className="num border border-cream-300 px-3 py-2 text-right font-bold">Masuk</th>
                           <th className="num border border-cream-300 px-3 py-2 text-right font-bold">Keluar</th>
                           <th className="num border border-cream-300 px-3 py-2 text-right font-bold">Baki ({item.unit})</th>
@@ -541,7 +543,7 @@ function ItemDetailModal({ itemId, onClose, onChanged }: { itemId: string; onClo
                           const bakiAwal = k0.baki - k0.masuk + k0.keluar;
                           return (
                             <tr className="bg-cream-100/70">
-                              <td className="border border-cream-300 px-3 py-2 text-bark-700/60" colSpan={4}>Baki dibawa ke hadapan</td>
+                              <td className="border border-cream-300 px-3 py-2 text-bark-700/60" colSpan={5}>Baki dibawa ke hadapan</td>
                               <td className="num border border-cream-300 px-3 py-2 text-right font-bold text-bark-900">{angka(bakiAwal)}</td>
                             </tr>
                           );
@@ -550,6 +552,7 @@ function ItemDetailModal({ itemId, onClose, onChanged }: { itemId: string; onClo
                           <tr key={i} className={i % 2 === 1 ? 'bg-cream-100/40' : ''}>
                             <td className="num whitespace-nowrap border border-cream-300 px-3 py-2 text-bark-700">{tarikh(k.date)}</td>
                             <td className="border border-cream-300 px-3 py-2 text-bark-900">{k.desc}</td>
+                            <td className="border border-cream-300 px-3 py-2 text-bark-700">{k.oleh || <span className="text-bark-700/40">Tidak direkod</span>}</td>
                             <td className="num whitespace-nowrap border border-cream-300 px-3 py-2 text-right font-semibold text-leaf-700">{k.masuk > 0 ? `+${angka(k.masuk)}` : ''}</td>
                             <td className="num whitespace-nowrap border border-cream-300 px-3 py-2 text-right font-semibold text-berry-600">{k.keluar > 0 ? `-${angka(k.keluar)}` : ''}</td>
                             <td className="num whitespace-nowrap border border-cream-300 px-3 py-2 text-right font-bold text-bark-900">{angka(k.baki)}</td>
@@ -558,7 +561,7 @@ function ItemDetailModal({ itemId, onClose, onChanged }: { itemId: string; onClo
                       </tbody>
                       <tfoot>
                         <tr className="bg-cream-200/80 font-bold">
-                          <td className="border border-coffee-500 px-3 py-2.5 text-bark-900" colSpan={2}>Jumlah</td>
+                          <td className="border border-coffee-500 px-3 py-2.5 text-bark-900" colSpan={3}>Jumlah</td>
                           <td className="num border border-coffee-500 px-3 py-2.5 text-right text-leaf-700">+{angka(kad.reduce((s, k) => s + k.masuk, 0))}</td>
                           <td className="num border border-coffee-500 px-3 py-2.5 text-right text-berry-600">-{angka(kad.reduce((s, k) => s + k.keluar, 0))}</td>
                           <td className="num border border-coffee-500 px-3 py-2.5 text-right text-bark-900">{angka(item.stock)}</td>
