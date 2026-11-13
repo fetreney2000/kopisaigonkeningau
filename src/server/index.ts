@@ -129,18 +129,9 @@ function jsonError(msg: string, code = 400) {
 
 const api = new Hono<{ Bindings: Env; Variables: Vars }>();
 
-api.get('/health', (c) => c.json({ ok: true }));
-
-// -- Penyelesaian sesi untuk semua laluan /api --------------------------------
-api.use('*', async (c, next) => {
-  const token = readCookie(c.req.header('Cookie'), SESSION_COOKIE);
-  c.set('user', token ? await getSessionUser(c.env.DB, token) : null);
-  await next();
-});
-
 // -- Pengepala keselamatan + polisi cache ---------------------------------------
-// Diterapkan pada semua tindak balas API. Untuk halaman HTML statik (dihidang
-// langsung dari ASSETS), lihat fail public/_headers.
+// Didaftarkan sebelum mana-mana route (Hono ikut urutan pendaftaran). Untuk halaman
+// HTML statik yang dihidang langsung dari ASSETS, lihat fail public/_headers.
 api.use('*', async (c, next) => {
   await next();
   c.header('X-Content-Type-Options', 'nosniff');
@@ -151,6 +142,15 @@ api.use('*', async (c, next) => {
     "default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; font-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
   );
   if (c.req.path.startsWith('/api/')) c.header('Cache-Control', 'no-store');
+});
+
+api.get('/health', (c) => c.json({ ok: true }));
+
+// -- Penyelesaian sesi untuk semua laluan /api --------------------------------
+api.use('*', async (c, next) => {
+  const token = readCookie(c.req.header('Cookie'), SESSION_COOKIE);
+  c.set('user', token ? await getSessionUser(c.env.DB, token) : null);
+  await next();
 });
 
 // -- Penjaga akses ---------------------------------------------------------------
