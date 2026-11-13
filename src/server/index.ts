@@ -635,7 +635,7 @@ api.post('/purchases', adminOnly, async (c) => {
   const unit_cost = num(b.unit_cost);
   if (!item_id) return jsonError('Item diperlukan');
   if (qty <= 0) return jsonError('Kuantiti mesti melebihi sifar');
-  if (unit_cost < 0) return jsonError('Kos seunit tidak sah');
+  if (unit_cost <= 0) return jsonError('Kos seunit mesti lebih daripada sifar');
 
   const item = await c.env.DB.prepare('SELECT id FROM items WHERE id = ?1 AND archived = 0').bind(item_id).first();
   if (!item) return jsonError('Item tidak dijumpai', 404);
@@ -654,8 +654,21 @@ api.post('/purchases', adminOnly, async (c) => {
 });
 
 api.delete('/purchases/:id', adminOnly, async (c) => {
+  const old = await c.env.DB.prepare(
+    'SELECT item_id, date, created_at FROM purchases WHERE id = ?1'
+  ).bind(c.req.param('id')).first<{ item_id: string; date: string; created_at: string }>();
   const r = await c.env.DB.prepare('DELETE FROM purchases WHERE id = ?1').bind(c.req.param('id')).run();
   if (!r.success) return jsonError('Gagal membatalkan pembelian', 500);
+  // Pulihkan kos seunit item daripada pembelian terkini yang masih ada,
+  // tetapi hanya jika pembelian yang dipadam adalah sumber kos terkini
+  if (old) {
+    const latest = await c.env.DB.prepare(
+      'SELECT unit_cost, date, created_at FROM purchases WHERE item_id = ?1 ORDER BY date DESC, created_at DESC LIMIT 1'
+    ).bind(old.item_id).first<{ unit_cost: number; date: string; created_at: string }>();
+    if (latest && (latest.date < old.date || (latest.date === old.date && latest.created_at <= old.created_at))) {
+      await c.env.DB.prepare('UPDATE items SET unit_cost = ?2 WHERE id = ?1').bind(old.item_id, latest.unit_cost).run();
+    }
+  }
   return c.json({ ok: true });
 });
 

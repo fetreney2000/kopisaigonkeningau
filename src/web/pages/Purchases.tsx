@@ -44,14 +44,19 @@ export default function Purchases() {
       setErr('Kuantiti mesti melebihi sifar.');
       return;
     }
+    const k = parseFloat(cost);
+    if (!k || k <= 0) {
+      setErr('Kos seunit mesti lebih daripada sifar.');
+      return;
+    }
     setSaving(true);
     setErr('');
     try {
-      await api.post('/api/purchases', { item_id: item.id, qty: q, unit_cost: parseFloat(cost) || 0, date, note });
+      await api.post('/api/purchases', { item_id: item.id, qty: q, unit_cost: k, date, note });
       toast('Pembelian direkod');
       setQty('');
       setNote('');
-      item.unit_cost = parseFloat(cost) || item.unit_cost; // kos seunit terkini
+      item.unit_cost = k; // kos seunit terkini
       list.reload();
       summary.reload();
     } catch (e) {
