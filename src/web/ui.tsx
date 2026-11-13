@@ -127,7 +127,7 @@ export function Modal({ open, onClose, title, children, wide }: { open: boolean;
     <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center" role="dialog" aria-modal="true">
       <div className="absolute inset-0 bg-bark-950/45 backdrop-blur-[2px]" onClick={onClose} />
       <div
-        className={`relative flex max-h-[92vh] w-full flex-col rounded-t-3xl bg-white shadow-2xl sm:rounded-3xl ${wide ? 'sm:max-w-2xl' : 'sm:max-w-lg'}`}
+        className={`relative flex max-h-[92vh] w-full flex-col bg-white shadow-2xl ${wide ? 'sm:max-w-2xl' : 'sm:max-w-lg'}`}
       >
         <div className="flex items-center justify-between border-b border-cream-200 px-5 py-4">
           <h3 className="text-lg font-bold text-bark-900">{title}</h3>
