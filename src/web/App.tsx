@@ -1,9 +1,10 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import { BarChart3, Boxes, Coffee, Home, LogOut, ScanLine, ShoppingCart, Users } from 'lucide-react';
+import { BarChart3, Boxes, Coffee, Home, ScanLine, ShoppingCart, UserRound, Users } from 'lucide-react';
 import { Toaster, Spinner } from './ui';
 import { api } from './api';
 import { AuthProvider, useAuth, isAdmin, type SessionUser } from './auth';
 import type { AuthMe, User } from '../shared/types';
+import AccountModal from './pages/AccountModal';
 import Dashboard from './pages/Dashboard';
 import StaffDashboard from './pages/StaffDashboard';
 import Inventory from './pages/Inventory';
@@ -51,19 +52,9 @@ function navFor(user: SessionUser) {
   return admin ? NAV : NAV.filter((n) => !n.admin);
 }
 
-function Sidebar({ route }: { route: string }) {
-  const { user, setUser } = useAuth();
+function Sidebar({ route, onAccount }: { route: string; onAccount: () => void }) {
+  const { user } = useAuth();
   const items = navFor(user);
-
-  async function logout() {
-    try {
-      await api.post('/api/auth/logout', {});
-    } catch {
-      // kuki tetap dibersihkan oleh pelayan
-    }
-    setUser(null);
-    window.location.hash = '/';
-  }
 
   return (
     <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col bg-bark-900 px-4 py-6 md:flex no-print">
@@ -96,8 +87,8 @@ function Sidebar({ route }: { route: string }) {
           <div className="truncate text-[11px] text-cream-50/50">
             {user?.position ? `${user.position} · ` : ''}{isAdmin(user) ? 'Admin' : 'Staff'}
           </div>
-          <button onClick={logout} className="mt-2.5 flex min-h-9 w-full items-center gap-2 rounded-lg px-2 text-xs font-semibold text-cream-50/60 transition-colors hover:bg-cream-50/10 hover:text-cream-50">
-            <LogOut size={14} /> Log Keluar
+          <button onClick={onAccount} className="mt-2.5 flex min-h-9 w-full items-center gap-2 rounded-lg px-2 text-xs font-semibold text-cream-50/60 transition-colors hover:bg-cream-50/10 hover:text-cream-50">
+            <UserRound size={14} /> Akaun &amp; Log Keluar
           </button>
         </div>
         <div className="px-2 text-[11px] leading-relaxed text-cream-50/35">
@@ -147,20 +138,10 @@ function BottomNav({ route }: { route: string }) {
 
 // ------------------------------------------------------------------ bar atas mudah alih
 
-/** Ikon Pengguna (admin sahaja) + Log Keluar — satu-satunya jalan keluar pada telefon */
-function MobileHeader({ title }: { title: string }) {
-  const { user, setUser } = useAuth();
+/** Ikon Pengguna (admin) + Akaun — akses log keluar & tukar kata laluan pada telefon */
+function MobileHeader({ title, onAccount }: { title: string; onAccount: () => void }) {
+  const { user } = useAuth();
   const admin = isAdmin(user);
-
-  async function logout() {
-    try {
-      await api.post('/api/auth/logout', {});
-    } catch {
-      // kuki tetap dibersihkan oleh pelayan
-    }
-    setUser(null);
-    window.location.hash = '/';
-  }
 
   return (
     <header className="sticky top-0 z-20 flex items-center gap-2.5 border-b border-cream-200 bg-cream-100/90 px-4 py-2.5 backdrop-blur md:hidden no-print">
@@ -179,11 +160,11 @@ function MobileHeader({ title }: { title: string }) {
           </button>
         )}
         <button
-          onClick={logout}
-          className="flex h-10 w-10 items-center justify-center text-bark-700/70 transition-colors hover:text-berry-600"
-          aria-label="Log Keluar"
+          onClick={onAccount}
+          className="flex h-10 w-10 items-center justify-center text-bark-700/70 transition-colors hover:text-bark-900"
+          aria-label="Akaun"
         >
-          <LogOut size={20} />
+          <UserRound size={20} />
         </button>
       </span>
     </header>
@@ -196,6 +177,7 @@ export default function App() {
   const route = useRoute();
   const [me, setMe] = useState<AuthMe | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [accountOpen, setAccountOpen] = useState(false);
 
   async function loadMe() {
     setLoadError(null);
@@ -244,13 +226,16 @@ export default function App() {
   // Halaman cetak kod QR pengguna (di luar kerangka biasa)
   if (base === '/cetak-qr-pengguna') {
     return (
-      <div className="min-h-screen md:pl-64 print-reset">
-        <Sidebar route={base} />
-        <main className="mx-auto w-full max-w-5xl px-4 pb-28 pt-4 md:px-10 md:pb-12 md:pt-8">
-          <UserQr />
-        </main>
-        <Toaster />
-      </div>
+      <AuthProvider user={me.user} setUser={(u) => setMe({ user: u, needs_setup: false })}>
+        <div className="min-h-screen md:pl-64 print-reset">
+          <Sidebar route={base} onAccount={() => setAccountOpen(true)} />
+          <main className="mx-auto w-full max-w-5xl px-4 pb-28 pt-4 md:px-10 md:pb-12 md:pt-8">
+            <UserQr />
+          </main>
+          <AccountModal open={accountOpen} onClose={() => setAccountOpen(false)} />
+          <Toaster />
+        </div>
+      </AuthProvider>
     );
   }
 
@@ -300,13 +285,14 @@ export default function App() {
   return (
     <AuthProvider user={me.user} setUser={(u) => setMe({ user: u, needs_setup: false })}>
       <div className="min-h-screen md:pl-64 print-reset">
-        <Sidebar route={base} />
+        <Sidebar route={base} onAccount={() => setAccountOpen(true)} />
         <BottomNav route={base} />
 
-        {/* Bar atas mudah alih — akses Pengguna + Log Keluar */}
-        <MobileHeader title={title} />
+        {/* Bar atas mudah alih — akses Pengguna (admin) + Akaun */}
+        <MobileHeader title={title} onAccount={() => setAccountOpen(true)} />
 
         <main className="mx-auto w-full max-w-5xl px-4 pb-28 pt-4 md:px-10 md:pb-12 md:pt-8">{page}</main>
+        <AccountModal open={accountOpen} onClose={() => setAccountOpen(false)} />
         <Toaster />
       </div>
     </AuthProvider>

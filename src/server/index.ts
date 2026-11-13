@@ -279,6 +279,37 @@ api.post('/auth/logout', async (c) => {
   return c.json({ ok: true });
 });
 
+// -- Tukar kata laluan sendiri (semua pengguna) --------------------------------
+api.post('/auth/change-password', requireAuth, async (c) => {
+  if (!sameOrigin(c.req.raw)) return jsonError('Asal permintaan tidak sah', 403);
+  const user = c.get('user')!;
+  const b = await c.req.json().catch(() => null) as Record<string, unknown> | null;
+  if (!b) return jsonError('Borang tidak sah');
+  const current = str(b.current_password);
+  const next = str(b.new_password);
+  if (!current) return jsonError('Kata laluan semasa diperlukan');
+  if (next.length < 8) return jsonError('Kata laluan baharu mesti sekurang-kurangnya 8 aksara');
+  if (next.length > 64) return jsonError('Kata laluan baharu terlalu panjang (maks 64)');
+  if (next === current) return jsonError('Kata laluan baharu mesti berbeza daripada yang semasa');
+
+  const row = await c.env.DB.prepare('SELECT password_hash FROM users WHERE id = ?1 AND archived = 0').bind(user.id).first<{ password_hash: string }>();
+  if (!row || !(await verifyPassword(row.password_hash, current, pepperOf(c.env)))) {
+    return jsonError('Kata laluan semasa salah', 401);
+  }
+
+  const hash = await hashPassword(next, pepperOf(c.env));
+  const r = await c.env.DB.prepare('UPDATE users SET password_hash = ?2 WHERE id = ?1').bind(user.id, hash).run();
+  if (!r.success) return jsonError('Gagal menukar kata laluan', 500);
+
+  // Sesi lain dilumpuhkan, sesi semasa dikekalkan (ikut OWASP Session Management)
+  const token = readCookie(c.req.header('Cookie'), SESSION_COOKIE);
+  if (token) {
+    await c.env.DB.prepare('DELETE FROM sessions WHERE user_id = ?1 AND token_hash != ?2')
+      .bind(user.id, await sha256Hex(token)).run();
+  }
+  return c.json({ ok: true });
+});
+
 // -- Pengurusan pengguna (admin sahaja) ----------------------------------------
 api.get('/users', adminOnly, async (c) => {
   const rows = await c.env.DB.prepare(
