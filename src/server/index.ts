@@ -1,7 +1,7 @@
 import { Hono, type Context, type MiddlewareHandler } from 'hono';
 import type { D1Database, Fetcher } from '@cloudflare/workers-types';
 import type {
-  Adjustment, AuthMe, Item, ItemWithStock, MonthRow, Movement, Purchase, Reports, Source, SourceTotals, StaffHome, StaffItem, StaffUsageRow, StockStatus, Summary, Usage, User,
+  Adjustment, AdjustmentRow, AuthMe, CategoryRow, Item, ItemWithStock, MonthRow, Movement, Purchase, Reports, Source, SourceTotals, StaffHome, StaffItem, StaffUsageRow, StockStatus, Summary, Usage, User,
 } from '../shared/types';
 import {
   SESSION_COOKIE, createSession, deleteSession, deleteUserSessions, dummyDerive, getSessionUser,
@@ -683,7 +683,7 @@ api.get('/reports', adminOnly, async (c) => {
   const startYm = start.toISOString().slice(0, 7);
   const since30 = new Date(Date.now() - 30 * 86400_000).toISOString().slice(0, 10);
 
-  const [spendRows, usageRows, topRows, itemRows, stockMap, usage30Map] = await Promise.all([
+  const [spendRows, usageRows, topRows, itemRows, stockMap, usage30Map, staffRows, adjRows, catSpendRows, catUsageRows] = await Promise.all([
     c.env.DB.prepare(
       `SELECT substr(p.date, 1, 7) AS ym, i.source AS source, SUM(p.qty * p.unit_cost) AS total
        FROM purchases p JOIN items i ON i.id = p.item_id
@@ -702,6 +702,26 @@ api.get('/reports', adminOnly, async (c) => {
     c.env.DB.prepare('SELECT * FROM items WHERE archived = 0').all<Item>(),
     stockByItem(c.env.DB),
     usage30ByItem(c.env.DB),
+    c.env.DB.prepare(
+      `SELECT u2.full_name AS user_name, COUNT(*) AS count, SUM(u.qty) AS qty, SUM(u.qty * i.unit_cost) AS cost
+       FROM usages u JOIN items i ON i.id = u.item_id LEFT JOIN users u2 ON u2.id = u.recorded_by
+       WHERE u.date >= ?1 GROUP BY u.recorded_by ORDER BY cost DESC`
+    ).bind(since30).all<{ user_name: string | null; count: number; qty: number; cost: number }>(),
+    c.env.DB.prepare(
+      `SELECT a.id, a.date, a.reason, a.delta, i.name AS item_name, i.unit, i.unit_cost
+       FROM adjustments a JOIN items i ON i.id = a.item_id
+       WHERE substr(a.date, 1, 7) >= ?1 ORDER BY a.date DESC, a.created_at DESC LIMIT 100`
+    ).bind(startYm).all<{ id: string; date: string; reason: string; delta: number; item_name: string; unit: string; unit_cost: number }>(),
+    c.env.DB.prepare(
+      `SELECT COALESCE(NULLIF(i.category, ''), 'Lain-lain') AS category, SUM(p.qty * p.unit_cost) AS total
+       FROM purchases p JOIN items i ON i.id = p.item_id
+       WHERE substr(p.date, 1, 7) >= ?1 GROUP BY category ORDER BY total DESC`
+    ).bind(startYm).all<{ category: string; total: number }>(),
+    c.env.DB.prepare(
+      `SELECT COALESCE(NULLIF(i.category, ''), 'Lain-lain') AS category, SUM(u.qty * i.unit_cost) AS total
+       FROM usages u JOIN items i ON i.id = u.item_id
+       WHERE substr(u.date, 1, 7) >= ?1 GROUP BY category ORDER BY total DESC`
+    ).bind(startYm).all<{ category: string; total: number }>(),
   ]);
 
   // Kumpulkan bulan berturutan
@@ -731,6 +751,15 @@ api.get('/reports', adminOnly, async (c) => {
     .map((it) => decorate(it, stockMap.get(it.id) ?? 0, usage30Map.get(it.id) ?? 0))
     .sort((a, b) => b.projected_monthly_cost - a.projected_monthly_cost);
 
+  // Pecahan kategori (gabungkan belanja + penggunaan)
+  const catMap = new Map<string, CategoryRow>();
+  for (const r of catSpendRows.results ?? []) catMap.set(r.category, { category: r.category, spend: num(r.total), usage_cost: 0 });
+  for (const r of catUsageRows.results ?? []) {
+    const row = catMap.get(r.category) ?? { category: r.category, spend: 0, usage_cost: 0 };
+    row.usage_cost = num(r.total);
+    catMap.set(r.category, row);
+  }
+
   return c.json<Reports>({
     months: yms.map((ym) => {
       const r = monthMap.get(ym)!;
@@ -739,6 +768,24 @@ api.get('/reports', adminOnly, async (c) => {
     }),
     top_usage: (topRows.results ?? []).map((r) => ({ ...r, source: (r.source === 'franchisor' ? 'franchisor' : 'local') as Source })),
     items,
+    staff_usage: (staffRows.results ?? []).map((r) => ({
+      user_name: r.user_name,
+      count: num(r.count),
+      qty: num(r.qty),
+      cost: Math.round(num(r.cost) * 100) / 100,
+    })),
+    adjustments: (adjRows.results ?? []).map((r) => ({
+      id: r.id,
+      date: r.date,
+      reason: r.reason,
+      delta: num(r.delta),
+      item_name: r.item_name,
+      unit: r.unit,
+      value: Math.round(num(r.delta) * num(r.unit_cost) * 100) / 100,
+    })),
+    by_category: [...catMap.values()]
+      .map((r) => ({ category: r.category, spend: Math.round(r.spend * 100) / 100, usage_cost: Math.round(r.usage_cost * 100) / 100 }))
+      .sort((a, b) => b.spend + b.usage_cost - (a.spend + a.usage_cost)),
   });
 });
 

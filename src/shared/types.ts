@@ -105,10 +105,50 @@ export interface MonthRow {
   usage_local: number;
 }
 
+export interface TopUsageRow {
+  item_id: string;
+  name: string;
+  unit: string;
+  source: Source;
+  qty: number;
+  cost: number;
+}
+
+export interface StaffUsageTotal {
+  /** Nama pengguna; null = rekod lama tanpa pengguna */
+  user_name: string | null;
+  count: number;
+  qty: number;
+  cost: number;
+}
+
+export interface AdjustmentRow {
+  id: string;
+  date: string;
+  reason: string;
+  delta: number;
+  item_name: string;
+  unit: string;
+  /** Nilai pelarasan (delta × kos seunit) — boleh negatif */
+  value: number;
+}
+
+export interface CategoryRow {
+  category: string;
+  spend: number;
+  usage_cost: number;
+}
+
 export interface Reports {
   months: MonthRow[];
-  top_usage: { item_id: string; name: string; unit: string; source: Source; qty: number; cost: number }[];
+  top_usage: TopUsageRow[];
   items: ItemWithStock[];
+  /** Agregat pengeluaran mengikut pengguna (30 hari) */
+  staff_usage: StaffUsageTotal[];
+  /** Senarai pelarasan dalam tempat dipilih */
+  adjustments: AdjustmentRow[];
+  /** Belanja & kos penggunaan mengikut kategori */
+  by_category: CategoryRow[];
 }
 
 export interface ItemDetail {
