@@ -145,6 +145,51 @@ function BottomNav({ route }: { route: string }) {
   );
 }
 
+// ------------------------------------------------------------------ bar atas mudah alih
+
+/** Ikon Pengguna (admin sahaja) + Log Keluar — satu-satunya jalan keluar pada telefon */
+function MobileHeader({ title }: { title: string }) {
+  const { user, setUser } = useAuth();
+  const admin = isAdmin(user);
+
+  async function logout() {
+    try {
+      await api.post('/api/auth/logout', {});
+    } catch {
+      // kuki tetap dibersihkan oleh pelayan
+    }
+    setUser(null);
+    window.location.hash = '/';
+  }
+
+  return (
+    <header className="sticky top-0 z-20 flex items-center gap-2.5 border-b border-cream-200 bg-cream-100/90 px-4 py-2.5 backdrop-blur md:hidden no-print">
+      <div className="rounded-lg bg-bark-800 p-1.5 text-cream-50">
+        <Coffee size={16} />
+      </div>
+      <span className="text-base font-bold text-bark-900">{title}</span>
+      <span className="ml-auto flex items-center gap-1">
+        {admin && (
+          <button
+            onClick={() => navigate('/pengguna')}
+            className="flex h-10 w-10 items-center justify-center text-bark-700/70 transition-colors hover:text-bark-900"
+            aria-label="Pengguna"
+          >
+            <Users size={20} />
+          </button>
+        )}
+        <button
+          onClick={logout}
+          className="flex h-10 w-10 items-center justify-center text-bark-700/70 transition-colors hover:text-berry-600"
+          aria-label="Log Keluar"
+        >
+          <LogOut size={20} />
+        </button>
+      </span>
+    </header>
+  );
+}
+
 // ------------------------------------------------------------------ App
 
 export default function App() {
@@ -258,13 +303,8 @@ export default function App() {
         <Sidebar route={base} />
         <BottomNav route={base} />
 
-        {/* Bar atas mudah alih */}
-        <header className="sticky top-0 z-20 flex items-center gap-2.5 border-b border-cream-200 bg-cream-100/90 px-4 py-3 backdrop-blur md:hidden no-print">
-          <div className="rounded-lg bg-bark-800 p-1.5 text-cream-50">
-            <Coffee size={16} />
-          </div>
-          <span className="text-base font-bold text-bark-900">{title}</span>
-        </header>
+        {/* Bar atas mudah alih — akses Pengguna + Log Keluar */}
+        <MobileHeader title={title} />
 
         <main className="mx-auto w-full max-w-5xl px-4 pb-28 pt-4 md:px-10 md:pb-12 md:pt-8">{page}</main>
         <Toaster />
