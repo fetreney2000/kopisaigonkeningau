@@ -6,18 +6,20 @@ import { angka, hariIni, rm } from '../format';
 import { Button, Card, Field, inputCls, Modal, Segmented, toast } from '../ui';
 import { ItemPickerField } from './ItemPicker';
 import type { ItemWithStock } from '../../shared/types';
+import { useAuth } from '../auth';
 
 type Mode = 'usage' | 'purchase';
 
-function ConfirmCard({ item, method, onDone, onCancel }: {
+function ConfirmCard({ item, method, canPurchase, onDone, onCancel }: {
   item: ItemWithStock;
   method: 'scan' | 'manual';
+  canPurchase: boolean;
   onDone: () => void;
   onCancel: () => void;
 }) {
   const [mode, setMode] = useState<Mode>('usage');
   const [qty, setQty] = useState('1');
-  const [cost, setCost] = useState(String(item.unit_cost));
+  const [cost, setCost] = useState(canPurchase ? String(item.unit_cost) : '');
   const [note, setNote] = useState('');
   const [saving, setSaving] = useState(false);
 
@@ -56,13 +58,13 @@ function ConfirmCard({ item, method, onDone, onCancel }: {
       <Segmented
         value={mode}
         onChange={(v) => setMode(v)}
-        options={[
+        options={canPurchase ? [
           { value: 'usage', label: 'Stok Keluar (guna)' },
           { value: 'purchase', label: 'Stok Masuk (beli)' },
-        ]}
+        ] : [{ value: 'usage', label: 'Stok Keluar (guna)' }]}
       />
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className={canPurchase ? 'grid grid-cols-2 gap-3' : ''}>
         <Field label="Kuantiti">
           <div className="flex items-stretch gap-2">
             <button
@@ -108,6 +110,8 @@ function ConfirmCard({ item, method, onDone, onCancel }: {
 }
 
 export default function ScanPage() {
+  const { user } = useAuth();
+  const isStaff = user?.role !== 'admin';
   const videoRef = useRef<HTMLVideoElement>(null);
   const scannerRef = useRef<QrScanner | null>(null);
   const [cameraOk, setCameraOk] = useState<boolean | null>(null); // null = memeriksa
@@ -204,7 +208,9 @@ export default function ScanPage() {
   return (
     <div className="space-y-5">
       <p className="px-1 text-sm text-bark-700/70">
-        Halakan kamera ke kod QR pada item untuk merekod <b>stok keluar</b> (penggunaan) atau <b>stok masuk</b> (pembelian).
+        Halakan kamera ke kod QR pada item untuk merekod <b>stok keluar</b> (penggunaan)
+        {!isStaff && <> atau <b>stok masuk</b> (pembelian)</>}.
+        {isStaff && ' Rakaman pembelian hanya boleh dibuat oleh admin.'}
       </p>
 
       {/* Kamera */}
@@ -254,7 +260,7 @@ export default function ScanPage() {
 
         {manualOpen && manualItem && (
           <div className="mt-4">
-            <ConfirmCard item={manualItem} method="manual" onDone={() => { setManualItem(null); setManualOpen(false); }} onCancel={() => setManualItem(null)} />
+            <ConfirmCard item={manualItem} method="manual" canPurchase={!isStaff} onDone={() => { setManualItem(null); setManualOpen(false); }} onCancel={() => setManualItem(null)} />
           </div>
         )}
       </Card>
@@ -265,6 +271,7 @@ export default function ScanPage() {
           <ConfirmCard
             item={foundItem}
             method="scan"
+            canPurchase={!isStaff}
             onDone={reset}
             onCancel={reset}
           />

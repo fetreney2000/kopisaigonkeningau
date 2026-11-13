@@ -117,3 +117,51 @@ export interface ItemDetail {
   usages: Usage[];
   adjustments: Adjustment[];
 }
+
+// ------------------------------------------------------------------ pengguna & kebenaran
+
+export type Role = 'admin' | 'staff';
+
+export interface User {
+  id: string;
+  full_name: string;
+  username: string;
+  position: string;
+  role: Role;
+  created_at: string;
+  archived: 0 | 1;
+}
+
+export interface AuthMe {
+  user: Pick<User, 'id' | 'full_name' | 'username' | 'position' | 'role'> | null;
+  needs_setup: boolean;
+}
+
+/** Item ringkas tanpa maklumat kos — untuk peranan staff */
+export interface StaffItem {
+  id: string;
+  name: string;
+  category: string;
+  unit: string;
+  source: Source;
+  min_qty: number;
+  stock: number;
+  status: StockStatus;
+}
+
+export interface StaffUsageRow {
+  id: string;
+  item_id: string;
+  item_name: string;
+  unit: string;
+  qty: number;
+  date: string;
+  created_at: string;
+}
+
+/** Data dashboard staff — tiada kos/perbelanjaan langsung */
+export interface StaffHome {
+  total_items: number;
+  need_reorder: StaffItem[];
+  my_usage_today: StaffUsageRow[];
+}

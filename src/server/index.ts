@@ -1,12 +1,18 @@
-import { Hono } from 'hono';
+import { Hono, type Context, type MiddlewareHandler } from 'hono';
 import type { D1Database, Fetcher } from '@cloudflare/workers-types';
 import type {
-  Adjustment, Item, ItemWithStock, MonthRow, Movement, Purchase, Reports, Source, SourceTotals, StockStatus, Summary, Usage,
+  Adjustment, AuthMe, Item, ItemWithStock, MonthRow, Movement, Purchase, Reports, Source, SourceTotals, StaffHome, StaffItem, StaffUsageRow, StockStatus, Summary, Usage, User,
 } from '../shared/types';
+import {
+  SESSION_COOKIE, createSession, deleteSession, deleteUserSessions, dummyDerive, getSessionUser,
+  hashPassword, readCookie, sameOrigin, sessionCookie, sha256Hex, tempPassword, verifyPassword,
+  type AuthUser,
+} from './auth';
 
-type Env = { DB: D1Database; ASSETS: Fetcher };
+type Env = { DB: D1Database; ASSETS: Fetcher; PASSWORD_PEPPER?: string };
+type Vars = { user: AuthUser | null };
 
-const app = new Hono<{ Bindings: Env }>();
+const app = new Hono<{ Bindings: Env; Variables: Vars }>();
 
 // ---------------------------------------------------------------- utiliti
 
@@ -93,18 +99,299 @@ function addTotals(t: SourceTotals, source: string, v: number) {
   else t.local += v;
 }
 
+/** Versi item tanpa kos — untuk peranan staff (tiada perbelanjaan dipaparkan) */
+function staffItem(item: Item, stock: number): StaffItem {
+  return {
+    id: item.id,
+    name: item.name,
+    category: item.category,
+    unit: item.unit,
+    source: item.source,
+    min_qty: item.min_qty,
+    stock,
+    status: statusOf(stock, item.min_qty),
+  };
+}
+
 function jsonError(msg: string, code = 400) {
   return Response.json({ error: msg }, { status: code });
 }
 
 // ---------------------------------------------------------------- API
 
-const api = new Hono<{ Bindings: Env }>();
+const api = new Hono<{ Bindings: Env; Variables: Vars }>();
 
 api.get('/health', (c) => c.json({ ok: true }));
 
-// -- Ringkasan papan pemuka -------------------------------------------------
-api.get('/summary', async (c) => {
+// -- Penyelesaian sesi untuk semua laluan /api --------------------------------
+api.use('*', async (c, next) => {
+  const token = readCookie(c.req.header('Cookie'), SESSION_COOKIE);
+  c.set('user', token ? await getSessionUser(c.env.DB, token) : null);
+  await next();
+});
+
+// -- Penjaga akses ---------------------------------------------------------------
+const requireAuth: MiddlewareHandler = async (c, next) => {
+  if (!c.get('user')) return jsonError('Perlu log masuk', 401);
+  await next();
+};
+
+const adminOnly: MiddlewareHandler = async (c, next) => {
+  if (c.get('user')?.role !== 'admin') return jsonError('Tiada kebenaran — admin sahaja', 403);
+  await next();
+};
+
+/** Laluan yang dibenarkan untuk staff (selain daripada admin) */
+function staffAllowed(path: string, method: string): boolean {
+  if (method === 'GET' && (path === '/api/staff/home' || path === '/api/items' || path.startsWith('/api/items/lookup/'))) return true;
+  if (method === 'POST' && path === '/api/usages') return true;
+  return false;
+}
+
+api.use('*', async (c, next) => {
+  const p = c.req.path;
+  if (p === '/api/health' || p.startsWith('/api/auth/')) return next();
+  const user = c.get('user');
+  if (!user) return jsonError('Perlu log masuk', 401);
+  if (user.role !== 'admin' && !staffAllowed(p, c.req.method)) return jsonError('Tiada kebenaran', 403);
+  await next();
+});
+
+// -- Autentikasi (awam) ---------------------------------------------------------
+function pepperOf(env: Env): string {
+  if (!env.PASSWORD_PEPPER) throw new Error('PASSWORD_PEPPER tidak ditetapkan — jalankan `wrangler secret put PASSWORD_PEPPER`');
+  return env.PASSWORD_PEPPER;
+}
+
+function clientIp(c: { req: { header: (k: string) => string | undefined } }): string {
+  return c.req.header('CF-Connecting-IP') ?? 'local';
+}
+
+/** Had kadar log masuk dalam-tinggalan: 5 gagalan → kunci 60 saat (per akaun+IP) */
+const loginFails = new Map<string, { n: number; until: number }>();
+function loginAllowed(key: string): boolean {
+  const e = loginFails.get(key);
+  return !e || e.until <= Date.now();
+}
+function recordLoginFail(key: string) {
+  const now = Date.now();
+  const e = loginFails.get(key) ?? { n: 0, until: 0 };
+  e.n += 1;
+  if (e.n >= 5) {
+    e.until = now + 60_000;
+    e.n = 0;
+  }
+  loginFails.set(key, e);
+}
+
+const USERNAME_RE = /^[a-z0-9][a-z0-9_.-]{2,31}$/;
+
+/** Cipta pengguna baharu (dikongsi oleh persediaan & pentadbir admin) */
+async function createUser(c: Context<{ Bindings: Env; Variables: Vars }>, role: 'admin' | 'staff') {
+  const b = (await c.req.json().catch(() => null)) as Record<string, unknown> | null;
+  if (!b) return jsonError('Borang tidak sah');
+  const full_name = str(b.full_name);
+  const username = str(b.username).toLowerCase();
+  const position = str(b.position);
+  const password = str(b.password);
+  if (!full_name) return jsonError('Nama penuh diperlukan');
+  if (!USERNAME_RE.test(username)) return jsonError('Nama pengguna mesti 3–32 aksara (huruf kecil, nombor, . _ -)');
+  if (password.length < 8) return jsonError('Kata laluan mesti sekurang-kurangnya 8 aksara');
+  if (password.length > 64) return jsonError('Kata laluan terlalu panjang (maks 64)');
+
+  const exists = await c.env.DB.prepare('SELECT id FROM users WHERE username = ?1').bind(username).first();
+  if (exists) return jsonError('Nama pengguna sudah digunakan');
+
+  const id = genId('USR');
+  const qrCode = genId('USR'); // kod QR log masuk kekal
+  const hash = await hashPassword(password, pepperOf(c.env));
+  const r = await c.env.DB.prepare(
+    `INSERT INTO users (id, full_name, username, position, role, password_hash, qr_token_hash, created_at, archived)
+     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, 0)`
+  ).bind(id, full_name, username, position, role, hash, await sha256Hex(qrCode), new Date().toISOString()).run();
+  if (!r.success) return jsonError('Gagal mencipta pengguna', 500);
+  return c.json({
+    user: { id, full_name, username, position, role } satisfies AuthUser,
+    qr_code: qrCode, // dipaparkan sekali sahaja untuk dicetak
+  }, 201);
+}
+
+api.get('/auth/me', async (c) => {
+  const n = await c.env.DB.prepare('SELECT COUNT(*) AS n FROM users').first<{ n: number }>();
+  const user = c.get('user');
+  return c.json<AuthMe>({ user, needs_setup: (n?.n ?? 0) === 0 });
+});
+
+api.post('/auth/setup', async (c) => {
+  if (!sameOrigin(c.req.raw)) return jsonError('Asal permintaan tidak sah', 403);
+  const n = await c.env.DB.prepare('SELECT COUNT(*) AS n FROM users').first<{ n: number }>();
+  if ((n?.n ?? 0) > 0) return jsonError('Akaun sudah wujud — sila log masuk', 403);
+  return createUser(c, 'admin');
+});
+
+api.post('/auth/login', async (c) => {
+  if (!sameOrigin(c.req.raw)) return jsonError('Asal permintaan tidak sah', 403);
+  const b = await c.req.json().catch(() => null) as Record<string, unknown> | null;
+  if (!b) return jsonError('Borang tidak sah');
+  const username = str(b.username).toLowerCase();
+  const password = str(b.password);
+  if (!username || !password) return jsonError('Nama pengguna dan kata laluan diperlukan');
+
+  const key = `${username}|${clientIp(c)}`;
+  if (!loginAllowed(key)) return jsonError('Terlalu banyak percubaan. Cuba lagi dalam 1 minit.', 429);
+
+  const row = await c.env.DB.prepare('SELECT * FROM users WHERE username = ?1 AND archived = 0').bind(username).first<User & { password_hash: string }>();
+  if (!row) {
+    await dummyDerive(password, pepperOf(c.env)); // masa tindak balas seragam
+    recordLoginFail(key);
+    return jsonError('Nama pengguna atau kata laluan salah', 401);
+  }
+  if (!(await verifyPassword(row.password_hash, password, pepperOf(c.env)))) {
+    recordLoginFail(key);
+    return jsonError('Nama pengguna atau kata laluan salah', 401);
+  }
+
+  loginFails.delete(key);
+  const token = await createSession(c.env.DB, row.id);
+  c.header('Set-Cookie', sessionCookie(token, new URL(c.req.url).protocol === 'https:'));
+  return c.json({ user: { id: row.id, full_name: row.full_name, username: row.username, position: row.position, role: row.role } satisfies AuthUser });
+});
+
+api.post('/auth/qr-login', async (c) => {
+  if (!sameOrigin(c.req.raw)) return jsonError('Asal permintaan tidak sah', 403);
+  const b = await c.req.json().catch(() => null) as Record<string, unknown> | null;
+  const code = str(b?.code).toUpperCase();
+  if (!/^USR-[A-Z2-9]{8}$/.test(code)) return jsonError('Kod QR log masuk tidak sah', 401);
+
+  const row = await c.env.DB.prepare('SELECT id, full_name, username, position, role FROM users WHERE qr_token_hash = ?1 AND archived = 0')
+    .bind(await sha256Hex(code)).first<AuthUser>();
+  if (!row) return jsonError('Kod QR tidak sah atau sudah tidak aktif', 401);
+
+  const token = await createSession(c.env.DB, row.id);
+  c.header('Set-Cookie', sessionCookie(token, new URL(c.req.url).protocol === 'https:'));
+  return c.json({ user: row });
+});
+
+api.post('/auth/logout', async (c) => {
+  const token = readCookie(c.req.header('Cookie'), SESSION_COOKIE);
+  if (token) await deleteSession(c.env.DB, token);
+  c.header('Set-Cookie', sessionCookie('', new URL(c.req.url).protocol === 'https:', true));
+  return c.json({ ok: true });
+});
+
+// -- Pengurusan pengguna (admin sahaja) ----------------------------------------
+api.get('/users', adminOnly, async (c) => {
+  const rows = await c.env.DB.prepare(
+    `SELECT id, full_name, username, position, role, created_at, archived FROM users
+     ORDER BY archived ASC, CASE role WHEN 'admin' THEN 0 ELSE 1 END, full_name COLLATE NOCASE`
+  ).all<User>();
+  return c.json({ users: rows.results ?? [] });
+});
+
+api.post('/users', adminOnly, async (c) => {
+  const b = await c.req.json().catch(() => null) as Record<string, unknown> | null;
+  const role = str(b?.role) === 'admin' ? 'admin' : 'staff';
+  return createUser(c, role);
+});
+
+api.patch('/users/:id', adminOnly, async (c) => {
+  const me = c.get('user')!;
+  const id = c.req.param('id');
+  const b = await c.req.json().catch(() => null) as Record<string, unknown> | null;
+  if (!b) return jsonError('Borang tidak sah');
+
+  const target = await c.env.DB.prepare('SELECT * FROM users WHERE id = ?1 AND archived = 0').bind(id).first<User & { password_hash: string }>();
+  if (!target) return jsonError('Pengguna tidak dijumpai', 404);
+
+  const full_name = str(b.full_name);
+  const username = str(b.username).toLowerCase();
+  const position = str(b.position);
+  const role = str(b.role) === 'admin' ? 'admin' : 'staff';
+  if (!full_name) return jsonError('Nama penuh diperlukan');
+  if (!USERNAME_RE.test(username)) return jsonError('Nama pengguna mesti 3–32 aksara (huruf kecil, nombor, . _ -)');
+  if (id === me.id && role !== target.role) return jsonError('Tidak boleh menukar peranan akaun sendiri', 403);
+
+  const dup = await c.env.DB.prepare('SELECT id FROM users WHERE username = ?1 AND id != ?2').bind(username, id).first();
+  if (dup) return jsonError('Nama pengguna sudah digunakan');
+
+  // Pastikan sentiasa ada sekurang-kurangnya satu admin aktif
+  if (target.role === 'admin' && role === 'staff') {
+    const n = await c.env.DB.prepare("SELECT COUNT(*) AS n FROM users WHERE role = 'admin' AND archived = 0 AND id != ?1").bind(id).first<{ n: number }>();
+    if ((n?.n ?? 0) < 1) return jsonError('Mesti kekal sekurang-kurangnya satu admin');
+  }
+
+  const r = await c.env.DB.prepare('UPDATE users SET full_name = ?2, username = ?3, position = ?4, role = ?5 WHERE id = ?1')
+    .bind(id, full_name, username, position, role).run();
+  if (!r.success) return jsonError('Gagal menyimpan pengguna', 500);
+  return c.json({ ok: true });
+});
+
+api.post('/users/:id/reset-password', adminOnly, async (c) => {
+  const b = await c.req.json().catch(() => null) as Record<string, unknown> | null;
+  const password = str(b?.password) || tempPassword();
+  if (password.length < 8) return jsonError('Kata laluan mesti sekurang-kurangnya 8 aksara');
+  if (password.length > 64) return jsonError('Kata laluan terlalu panjang (maks 64)');
+
+  const id = c.req.param('id');
+  const target = await c.env.DB.prepare('SELECT id FROM users WHERE id = ?1 AND archived = 0').bind(id).first();
+  if (!target) return jsonError('Pengguna tidak dijumpai', 404);
+
+  const hash = await hashPassword(password, pepperOf(c.env));
+  const r = await c.env.DB.prepare('UPDATE users SET password_hash = ?2 WHERE id = ?1').bind(id, hash).run();
+  if (!r.success) return jsonError('Gagal menetapkan semula kata laluan', 500);
+  await deleteUserSessions(c.env.DB, id); // sesi lama tidak lagi sah
+  return c.json({ password }); // dipaparkan sekali sahaja
+});
+
+api.post('/users/:id/rotate-qr', adminOnly, async (c) => {
+  const id = c.req.param('id');
+  const target = await c.env.DB.prepare('SELECT id FROM users WHERE id = ?1 AND archived = 0').bind(id).first();
+  if (!target) return jsonError('Pengguna tidak dijumpai', 404);
+  const qrCode = genId('USR');
+  const r = await c.env.DB.prepare('UPDATE users SET qr_token_hash = ?2 WHERE id = ?1').bind(id, await sha256Hex(qrCode)).run();
+  if (!r.success) return jsonError('Gagal menukar kod QR', 500);
+  return c.json({ qr_code: qrCode }); // kod lama lupus — cetak yang baharu
+});
+
+api.delete('/users/:id', adminOnly, async (c) => {
+  const me = c.get('user')!;
+  const id = c.req.param('id');
+  if (id === me.id) return jsonError('Tidak boleh melumpuhkan akaun sendiri', 403);
+  const target = await c.env.DB.prepare('SELECT id, role FROM users WHERE id = ?1 AND archived = 0').bind(id).first<User>();
+  if (!target) return jsonError('Pengguna tidak dijumpai', 404);
+  if (target.role === 'admin') {
+    const n = await c.env.DB.prepare("SELECT COUNT(*) AS n FROM users WHERE role = 'admin' AND archived = 0 AND id != ?1").bind(id).first<{ n: number }>();
+    if ((n?.n ?? 0) < 1) return jsonError('Mesti kekal sekurang-kurangnya satu admin');
+  }
+  const r = await c.env.DB.prepare('UPDATE users SET archived = 1 WHERE id = ?1').bind(id).run();
+  if (!r.success) return jsonError('Gagal melumpuhkan pengguna', 500);
+  await deleteUserSessions(c.env.DB, id);
+  return c.json({ ok: true });
+});
+
+// -- Dashboard staff (tiada kos/perbelanjaan) -----------------------------------
+api.get('/staff/home', requireAuth, async (c) => {
+  const user = c.get('user')!;
+  const db = c.env.DB;
+  const [itemRows, stockMap, myRows] = await Promise.all([
+    db.prepare('SELECT * FROM items WHERE archived = 0').all<Item>(),
+    stockByItem(db),
+    db.prepare(
+      `SELECT u.id, u.item_id, i.name AS item_name, i.unit, u.qty, u.date, u.created_at
+       FROM usages u JOIN items i ON i.id = u.item_id
+       WHERE u.recorded_by = ?1 AND u.date = ?2 ORDER BY u.created_at DESC LIMIT 50`
+    ).bind(user.id, today()).all<StaffUsageRow>(),
+  ]);
+  const all = itemRows.results ?? [];
+  const need_reorder = all
+    .map((it) => staffItem(it, stockMap.get(it.id) ?? 0))
+    .filter((it) => it.status !== 'ok')
+    .sort((a, b) => SEVERITY[a.status] - SEVERITY[b.status] || a.name.localeCompare(b.name));
+  return c.json<StaffHome>({ total_items: all.length, need_reorder, my_usage_today: myRows.results ?? [] });
+});
+
+// -- Ringkasan papan pemuka (admin sahaja — mengandungi nilai perbelanjaan) ---
+api.get('/summary', adminOnly, async (c) => {
   const db = c.env.DB;
   const now = new Date();
   const ym = now.toISOString().slice(0, 7);
@@ -179,6 +466,7 @@ api.get('/summary', async (c) => {
 
 // -- Item --------------------------------------------------------------------
 api.get('/items', async (c) => {
+  const user = c.get('user')!;
   const q = str(c.req.query('q')).toLowerCase();
   const source = str(c.req.query('source'));
   const filter = str(c.req.query('filter')); // low | source
@@ -201,20 +489,26 @@ api.get('/items', async (c) => {
   if (filter === 'low') items = items.filter((it) => it.status !== 'ok');
   items.sort((a, b) => SEVERITY[a.status] - SEVERITY[b.status] || a.name.localeCompare(b.name));
 
+  // Staff menerima versi tanpa kos
+  if (user.role !== 'admin') return c.json({ items: items.map((it) => staffItem(it, it.stock)) });
   return c.json({ items });
 });
 
 api.get('/items/lookup/:code', async (c) => {
   // Khusus untuk imbasan QR — padanan tepat kod item (bukan carian nama)
+  const user = c.get('user')!;
   const code = str(c.req.param('code')).toUpperCase();
   if (!/^SG-[A-Z2-9]{8}$/.test(code)) return jsonError('Kod tidak sah', 404);
   const itemRow = await c.env.DB.prepare('SELECT * FROM items WHERE id = ?1 AND archived = 0').bind(code).first<Item>();
   if (!itemRow) return jsonError('Item tidak dijumpai', 404);
   const [stockMap, usage30Map] = await Promise.all([stockByItem(c.env.DB), usage30ByItem(c.env.DB)]);
+  if (user.role !== 'admin') {
+    return c.json({ item: staffItem(itemRow, stockMap.get(code) ?? 0) });
+  }
   return c.json({ item: decorate(itemRow, stockMap.get(code) ?? 0, usage30Map.get(code) ?? 0) });
 });
 
-api.post('/items', async (c) => {
+api.post('/items', adminOnly, async (c) => {
   const b = await c.req.json().catch(() => null);
   if (!b) return jsonError('Borang tidak sah');
   const name = str(b.name);
@@ -240,7 +534,7 @@ api.post('/items', async (c) => {
   return c.json({ item }, 201);
 });
 
-api.put('/items/:id', async (c) => {
+api.put('/items/:id', adminOnly, async (c) => {
   const id = c.req.param('id');
   const b = await c.req.json().catch(() => null);
   if (!b) return jsonError('Borang tidak sah');
@@ -256,14 +550,14 @@ api.put('/items/:id', async (c) => {
   return c.json({ ok: true });
 });
 
-api.delete('/items/:id', async (c) => {
+api.delete('/items/:id', adminOnly, async (c) => {
   const r = await c.env.DB.prepare('UPDATE items SET archived = 1 WHERE id = ?1').bind(c.req.param('id')).run();
   if (!r.success) return jsonError('Gagal memadam item', 500);
   return c.json({ ok: true });
 });
 
-// -- Butiran item ------------------------------------------------------------
-api.get('/items/:id', async (c) => {
+// -- Butiran item (admin sahaja — mengandungi kos & sejarah) -------------------
+api.get('/items/:id', adminOnly, async (c) => {
   const id = c.req.param('id');
   const itemRow = await c.env.DB.prepare('SELECT * FROM items WHERE id = ?1 AND archived = 0').bind(id).first<Item>();
   if (!itemRow) return jsonError('Item tidak dijumpai', 404);
@@ -284,8 +578,8 @@ api.get('/items/:id', async (c) => {
   });
 });
 
-// -- Pembelian ---------------------------------------------------------------
-api.get('/purchases', async (c) => {
+// -- Pembelian (admin sahaja) --------------------------------------------------
+api.get('/purchases', adminOnly, async (c) => {
   const rows = await c.env.DB.prepare(
     `SELECT p.*, i.name AS item_name, i.unit AS item_unit, i.source AS item_source
      FROM purchases p JOIN items i ON i.id = p.item_id
@@ -295,7 +589,7 @@ api.get('/purchases', async (c) => {
   return c.json({ items: rows.results ?? [] });
 });
 
-api.post('/purchases', async (c) => {
+api.post('/purchases', adminOnly, async (c) => {
   const b = await c.req.json().catch(() => null);
   if (!b) return jsonError('Borang tidak sah');
   const item_id = str(b.item_id);
@@ -321,14 +615,15 @@ api.post('/purchases', async (c) => {
   return c.json({ id }, 201);
 });
 
-api.delete('/purchases/:id', async (c) => {
+api.delete('/purchases/:id', adminOnly, async (c) => {
   const r = await c.env.DB.prepare('DELETE FROM purchases WHERE id = ?1').bind(c.req.param('id')).run();
   if (!r.success) return jsonError('Gagal membatalkan pembelian', 500);
   return c.json({ ok: true });
 });
 
 // -- Penggunaan --------------------------------------------------------------
-api.post('/usages', async (c) => {
+api.post('/usages', requireAuth, async (c) => {
+  const user = c.get('user')!;
   const b = await c.req.json().catch(() => null);
   if (!b) return jsonError('Borang tidak sah');
   const item_id = str(b.item_id);
@@ -342,20 +637,20 @@ api.post('/usages', async (c) => {
 
   const id = genId('US');
   await c.env.DB.prepare(
-    `INSERT INTO usages (id, item_id, qty, date, method, note, created_at)
-     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)`
-  ).bind(id, item_id, qty, str(b.date) || today(), method, str(b.note), new Date().toISOString()).run();
+    `INSERT INTO usages (id, item_id, qty, date, method, note, created_at, recorded_by)
+     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)`
+  ).bind(id, item_id, qty, str(b.date) || today(), method, str(b.note), new Date().toISOString(), user.id).run();
   return c.json({ id }, 201);
 });
 
-api.delete('/usages/:id', async (c) => {
+api.delete('/usages/:id', adminOnly, async (c) => {
   const r = await c.env.DB.prepare('DELETE FROM usages WHERE id = ?1').bind(c.req.param('id')).run();
   if (!r.success) return jsonError('Gagal membatalkan rekod', 500);
   return c.json({ ok: true });
 });
 
-// -- Pelarasan stok ----------------------------------------------------------
-api.post('/adjustments', async (c) => {
+// -- Pelarasan stok (admin sahaja) ---------------------------------------------
+api.post('/adjustments', adminOnly, async (c) => {
   const b = await c.req.json().catch(() => null);
   if (!b) return jsonError('Borang tidak sah');
   const item_id = str(b.item_id);
@@ -374,14 +669,14 @@ api.post('/adjustments', async (c) => {
   return c.json({ id }, 201);
 });
 
-api.delete('/adjustments/:id', async (c) => {
+api.delete('/adjustments/:id', adminOnly, async (c) => {
   const r = await c.env.DB.prepare('DELETE FROM adjustments WHERE id = ?1').bind(c.req.param('id')).run();
   if (!r.success) return jsonError('Gagal membatalkan pelarasan', 500);
   return c.json({ ok: true });
 });
 
-// -- Laporan -----------------------------------------------------------------
-api.get('/reports', async (c) => {
+// -- Laporan (admin sahaja) ----------------------------------------------------
+api.get('/reports', adminOnly, async (c) => {
   const months = Math.min(24, Math.max(1, num(c.req.query('months'), 6)));
   const start = new Date();
   start.setUTCMonth(start.getUTCMonth() - (months - 1));

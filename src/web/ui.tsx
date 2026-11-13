@@ -196,10 +196,10 @@ export function Toaster() {
 
 // ------------------------------------------------------------------ Lain-lain
 
-export function Spinner({ className = '' }: { className?: string }) {
+export function Spinner({ className = '', small }: { className?: string; small?: boolean }) {
   return (
-    <div className={`flex items-center justify-center py-12 ${className}`}>
-      <div className="h-8 w-8 animate-spin rounded-full border-[3px] border-cream-300 border-t-coffee-500" />
+    <div className={`flex items-center justify-center ${small ? 'py-0' : 'py-12'} ${className}`}>
+      <div className={`${small ? 'h-5 w-5 border-2' : 'h-8 w-8 border-[3px]'} animate-spin rounded-full border-cream-300 border-t-coffee-500`} />
     </div>
   );
 }
