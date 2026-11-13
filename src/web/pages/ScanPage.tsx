@@ -120,24 +120,28 @@ export default function ScanPage() {
   const lookup = useCallback(async (text: string) => {
     // Nyahkod nilai yang mungkin datang daripada URL atau kod lain
     let id = text.trim();
-    const m = id.match(/(?:SG-[A-Z2-9]{8})/i);
+    const m = id.match(/SG-[A-Z2-9]{8}/i);
     if (m) id = m[0].toUpperCase();
     if (!/^SG-[A-Z2-9]{8}$/i.test(id)) {
       setNotFound(id);
       return;
     }
     try {
-      const res = await api.get<{ items: ItemWithStock[] }>(`/api/items?q=${encodeURIComponent(id)}`);
-      const hit = res.items.find((i) => i.id.toUpperCase() === id.toUpperCase());
-      if (hit) {
-        setFoundItem(hit);
-      } else {
-        setNotFound(id);
-      }
+      const res = await api.get<{ item: ItemWithStock }>(`/api/items/lookup/${encodeURIComponent(id)}`);
+      setFoundItem(res.item);
     } catch {
       setNotFound(id);
     }
   }, []);
+
+  // Sokongan pautan terus: /#/imbas?code=SG-XXXX (cth. daripada pautan kongsi)
+  useEffect(() => {
+    const h = window.location.hash;
+    const qi = h.indexOf('?');
+    if (qi === -1) return;
+    const code = new URLSearchParams(h.slice(qi + 1)).get('code');
+    if (code) void lookup(code);
+  }, [lookup]);
 
   const onScan = useCallback(
     (text: string) => {

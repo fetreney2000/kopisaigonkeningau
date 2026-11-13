@@ -12,7 +12,7 @@
     {
       "binding": "DB",
       "database_name": "saigon-inventory",
-      "database_id": "REPLACE_WITH_YOUR_DATABASE_ID"
+      "database_id": "02890643-feb0-49e8-af13-e37fe6f8acf2"
     }
   ],
   "observability": { "enabled": true }

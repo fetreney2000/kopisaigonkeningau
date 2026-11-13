@@ -193,12 +193,25 @@ api.get('/items', async (c) => {
     decorate(it, stockMap.get(it.id) ?? 0, usage30Map.get(it.id) ?? 0)
   );
 
-  if (q) items = items.filter((it) => it.name.toLowerCase().includes(q) || it.category.toLowerCase().includes(q));
+  if (q) {
+    const ql = q.toLowerCase();
+    items = items.filter((it) => it.name.toLowerCase().includes(ql) || it.category.toLowerCase().includes(ql) || it.id.toLowerCase().includes(ql));
+  }
   if (source === 'franchisor' || source === 'local') items = items.filter((it) => it.source === source);
   if (filter === 'low') items = items.filter((it) => it.status !== 'ok');
   items.sort((a, b) => SEVERITY[a.status] - SEVERITY[b.status] || a.name.localeCompare(b.name));
 
   return c.json({ items });
+});
+
+api.get('/items/lookup/:code', async (c) => {
+  // Khusus untuk imbasan QR — padanan tepat kod item (bukan carian nama)
+  const code = str(c.req.param('code')).toUpperCase();
+  if (!/^SG-[A-Z2-9]{8}$/.test(code)) return jsonError('Kod tidak sah', 404);
+  const itemRow = await c.env.DB.prepare('SELECT * FROM items WHERE id = ?1 AND archived = 0').bind(code).first<Item>();
+  if (!itemRow) return jsonError('Item tidak dijumpai', 404);
+  const [stockMap, usage30Map] = await Promise.all([stockByItem(c.env.DB), usage30ByItem(c.env.DB)]);
+  return c.json({ item: decorate(itemRow, stockMap.get(code) ?? 0, usage30Map.get(code) ?? 0) });
 });
 
 api.post('/items', async (c) => {
