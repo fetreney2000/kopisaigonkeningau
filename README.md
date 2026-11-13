@@ -11,6 +11,7 @@ Sistem inventori ringkas untuk kedai kopi — dibina khas untuk menjejak dua sum
 
 | Ciri | Keterangan |
 | --- | --- |
+| **Akaun Pengguna** | 2 peranan: **admin** (akses penuh + urus pengguna) dan **staff** (imbas stok keluar + dashboard sendiri — **tiada maklumat kos/perbelanjaan dipaparkan**). Log masuk dengan kata laluan **atau** kod QR peribadi yang boleh dicetak. Sesi kekal 30 hari |
 | **Papan Pemuka** | Nilai stok, belanja bulan ini (pecahan francais/tempatan), amaran stok, aktiviti terkini, unjuran 30 hari |
 | **Inventori** | Senarai item dengan carian + tapis (Semua / Francais / Tempatan / Perlu Dipesan), status automatik: *Cukup / Hampir Rendah / Stok Rendah / Habis* |
 | **Imbas (QR)** | Imbas kod QR item dengan kamera telefon → sahkan kuantiti → stok keluar/kemas direkod. Borang manual disediakan jika kamera tiada |
@@ -49,7 +50,48 @@ npm run db:seed:local         # (pilihan) data contoh
 npm run dev                   # buka http://localhost:5173
 ```
 
+Untuk log masuk di dev, cipta fail `.dev.vars` (tidak disimpan dalam git) dengan *pepper*:
+
+```
+PASSWORD_PEPPER="nilai-pepper-anda"
+```
+
+> **Penting**: `.dev.vars` dibaca semasa pelayan dev dimulakan — jika anda mengubahnya,
+> mulakan semula `npm run dev`.
+
 Imbasan kamera berfungsi di `localhost` kerana dianggap konteks selamat.
+
+## Log Masuk & Akaun Pengguna
+
+1. **Persediaan pertama**: buka aplikasi — jika tiada akaun lagi, skrin *Persediaan Pertama*
+   muncul untuk mencipta akaun **admin** pertama. Tiada kata laluan default.
+2. **Peranan**:
+   - **Admin** — akses penuh: inventori, pembelian, laporan, label, pengguna.
+   - **Staff** — dashboard sendiri + imbas stok keluar sahaja. Kos, harga dan perbelanjaan
+     **tidak dipaparkan langsung** kepada staff (disingkirkan di pelayan juga, bukan hanya disembunyikan).
+3. **Kod QR log masuk**: setiap pengguna mendapat kod QR peribadi (`USR-XXXXXXXX`) yang boleh
+   dicetak (`Pengguna` → *Kod QR* → *Cetak QR*). Kod ini **kunci log masuk kekal** — sesiapa yang
+   memegangnya boleh log masuk sebagai pengguna tersebut, jadi simpan dengan selamat.
+   Jika kad hilang: *Tukar Kod QR* menjana kod baharu — kod lama terus tidak sah.
+4. **Admin boleh**: sunting nama pengguna/jawatan/peranan, tetapkan semula kata laluan
+   (jana kata laluan sementara `Kopi-XXXXXX`, dipaparkan sekali sahaja), dan lumpuhkan akaun.
+   Sistem sentiasa mengekalkan sekurang-kurangnya satu admin aktif.
+
+## Keselamatan Kata Laluan
+
+- Kata laluan disimpan sebagai **PBKDF2-HMAC-SHA256 (100,000 lelaran)** dengan salt rawak +
+  *pepper* rahsia (ikut OWASP Password Storage Cheat Sheet) — pepper tidak pernah disimpan dalam D1.
+- Sesi: kuki `HttpOnly; SameSite=Lax` 30 hari; D1 menyimpan **hash SHA-256 token sahaja**.
+- Had kadar log masuk: 5 kegagalan → kunci 60 saat.
+- Tukar kata laluan / lumpuhkan akaun melumpuhkan semua sesi pengguna tersebut.
+
+### Tetapkan pepper pada produksi (wajib, sekali sahaja)
+
+```bash
+npx wrangler secret put PASSWORD_PEPPER
+```
+
+Jika pepper hilang, semua kata laluan mesti ditetapkan semula (kod QR log masuk tidak terjejas).
 
 ## Deploy ke Cloudflare (percuma)
 
@@ -88,10 +130,11 @@ akan membina dan deploy automatik ke Cloudflare. Setup sekali sahaja:
 
 ```
 src/
-  server/index.ts     # API Hono di Workers (D1) — item, pembelian, penggunaan, pelarasan, ringkasan, laporan
+  server/index.ts     # API Hono di Workers (D1) — item, pembelian, penggunaan, pelarasan, ringkasan, laporan, pengguna
+  server/auth.ts      # kriptografi kata laluan (PBKDF2 + pepper) & sesi kuki
   shared/types.ts     # jenis data dikongsi pelayan ↔ klien
   web/                # aplikasi React
-    pages/            # Dashboard, Inventory, ScanPage, Purchases, Reports, Labels
+    pages/            # Dashboard, StaffDashboard, Inventory, ScanPage, Purchases, Reports, Labels, Users, Login
   migrations/         # skema SQL D1 (berjejak — dijalankan oleh wrangler d1 migrations apply)
   seed/sample.sql     # data contoh (pilihan, jangan guna pada produksi)
 wrangler.jsonc        # konfigurasi Workers + D1
