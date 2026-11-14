@@ -106,6 +106,10 @@ npx wrangler secret put PASSWORD_PEPPER
 Jika pepper hilang, semua kata laluan mesti ditetapkan semula. Log masuk QR masih berfungsi, tetapi
 kad QR tidak lagi dapat dipaparkan sehingga kod ditukar (tukar kod akan menyulitkannya dengan pepper baharu).
 
+> **Penting:** secret Cloudflare adalah **per-Worker**. Jika Worker dicipta semula atau dinamakan
+> semula (nama baharu = Worker baharu), tetapkan semula `PASSWORD_PEPPER` dengan nilai yang sama
+> sebelum log masuk. Tanpa pepper, log masuk kata laluan gagal (HTTP 500).
+
 ### Token persediaan pertama (disyorkan)
 
 Sebelum akaun admin pertama dicipta, sesiapa yang menemui URL aplikasi boleh menuntut
