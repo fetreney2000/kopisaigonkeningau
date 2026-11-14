@@ -138,7 +138,7 @@ Selepas akaun admin wujud, persediaan ditutup secara automatik.
    npm run deploy
    ```
    `npm run deploy` membina aplikasi, menjalankan migrasi pada D1 produksi, kemudian deploy.
-   Aplikasi akan hidup di `https://saigon-inventory.<subdomain-anda>.workers.dev` - HTTPS automatik,
+   Aplikasi akan hidup di `https://kopisaigonkeningau.<subdomain-anda>.workers.dev` - HTTPS automatik,
    jadi pengimbasan kamera berfungsi terus di telefon.
 
 ### Deploy automatik dari GitHub (pilihan)
